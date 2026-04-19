@@ -1,0 +1,13 @@
+{
+  "name": "market-view",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "market-view:llm-test": "node scripts/generate-market-view-report-openrouter.js",
+    "test": "node --check scripts/generate-market-view-report-openrouter.js && node -e 'JSON.parse(require(\"fs\").readFileSync(\"fixtures/market-view/mock-input.json\", \"utf8\")); console.log(\"fixture ok\")'"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
