@@ -4,10 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "node local-server.js",
     "market-view:llm-test": "node scripts/generate-market-view-report-openrouter.js",
-    "test": "node --check scripts/generate-market-view-report-openrouter.js && node -e 'JSON.parse(require(\"fs\").readFileSync(\"fixtures/market-view/mock-input.json\", \"utf8\")); console.log(\"fixture ok\")'"
+    "start": "node local-server.js",
+    "test": "node --check scripts/generate-market-view-report-openrouter.js && node --check local-server.js && node -e 'JSON.parse(require(\"fs\").readFileSync(\"fixtures/market-view/mock-input.json\", \"utf8\")); console.log(\"fixture ok\")'"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0"
   }
 }

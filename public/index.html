@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market View Workflow</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="command-surface" aria-labelledby="workflow-title">
+        <div class="command-copy">
+          <p class="eyebrow">Trader workflow</p>
+          <h1 id="workflow-title">Market View</h1>
+          <p class="lede">Run the trader position workflow, generate quick reads for each trader, and get a crypto plus macro market narrative.</p>
+        </div>
+
+        <div class="run-panel" aria-label="Market View runner">
+          <div class="field-row">
+            <label for="model">OpenRouter model</label>
+            <select id="model">
+              <option value="openai/gpt-oss-120b:free">openai/gpt-oss-120b:free</option>
+              <option value="openai/gpt-oss-20b:free">openai/gpt-oss-20b:free</option>
+              <option value="openai/gpt-4o">openai/gpt-4o</option>
+              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
+            </select>
+          </div>
+          <button id="run" class="run-button" type="button">
+            Run Market View
+          </button>
+          <p id="status" class="status-line" role="status">Ready. Uses the mock normalized fixture for this local test.</p>
+        </div>
+
+        <img
+          class="market-image"
+          alt="Trading terminal with market charts"
+          src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=900&q=80"
+        />
+      </section>
+
+      <section class="source-strip" aria-label="Workflow sources">
+        <div><span>LightLens</span><strong>Hansolar</strong></div>
+        <div><span>Hyperdash</span><strong>Giver + cohorts</strong></div>
+        <div><span>Hypurrscan</span><strong>3 traders</strong></div>
+        <div><span>Lighter</span><strong>NYP pool</strong></div>
+        <div><span>CoinSense</span><strong>Vault</strong></div>
+      </section>
+
+      <section class="snapshot-strip" aria-label="Saved report snapshots">
+        <div class="snapshot-heading">
+          <span>Snapshots</span>
+          <strong>Previous Market View reports</strong>
+        </div>
+        <div id="snapshots" class="snapshot-list">
+          <button type="button" disabled>No snapshots loaded</button>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <article class="report-view" aria-label="Generated report">
+          <div class="report-toolbar">
+            <h2>Report</h2>
+            <button id="copy" type="button">Copy markdown</button>
+          </div>
+          <div id="report" class="report-output">
+            <p class="empty-state">Run the workflow to generate the report.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

@@ -26,6 +26,7 @@ cp .env.example .env
 Set:
 
 ```env
+FIRECRAWL_API_KEY=your_key_here
 OPENROUTER_API_KEY=your_key_here
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
 ```
@@ -34,6 +35,18 @@ OPENROUTER_MODEL=openai/gpt-oss-120b:free
 
 ```bash
 npm run market-view:llm-test
+```
+
+Run with live Firecrawl collection:
+
+```bash
+npm run market-view:llm-test -- --live
+```
+
+Run the web app locally:
+
+```bash
+npm run dev
 ```
 
 Use a specific model:
@@ -59,3 +72,17 @@ The report includes:
 - CoinSense vault monitor section
 - Hyperdash cohort sentiment table
 - final crypto, macro, and vault synthesis
+
+## Vercel
+
+The Vercel deployment uses `public/` for the frontend and `api/` serverless functions for the workflow button.
+
+Required Vercel environment variables:
+
+```env
+FIRECRAWL_API_KEY=your_key_here
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=openai/gpt-oss-120b:free
+```
+
+Generated Vercel reports embed the cropped CoinSense chart image directly in the markdown response because Vercel serverless storage is stateless. The browser UI also keeps recent snapshots in localStorage for quick review.

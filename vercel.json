@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/market-view/run.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 60
+      }
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/health",
+      "dest": "/api/health.js"
+    },
+    {
+      "src": "/api/market-view/run",
+      "dest": "/api/market-view/run.js"
+    },
+    {
+      "src": "/api/market-view/snapshots",
+      "dest": "/api/market-view/snapshots.js"
+    },
+    {
+      "src": "/api/market-view/snapshots/([^/]+)/assets/([^/]+)",
+      "dest": "/api/market-view/snapshots/[id]/assets/[file].js?id=$1&file=$2"
+    },
+    {
+      "src": "/api/market-view/snapshots/([^/]+)",
+      "dest": "/api/market-view/snapshots/[id].js?id=$1"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
+}
