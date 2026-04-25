@@ -9,6 +9,7 @@ const FRESH_MAX_AGE_MS = 0;
 
 const urls = {
   hansolar: "https://lightlens.vercel.app/traders/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db",
+  hansolarHypurrscan: "https://hypurrscan.io/address/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db#perps",
   giver: "https://legacy.hyperdash.com/trader/0x8fc7c0442e582bca195978c5a4fdec2e7c5bb0f7",
   erebos911: "https://hypurrscan.io/address/0x79cc76364b5fb263a25bd52930e3d9788fcfeea8#perps",
   coinbender: "https://hypurrscan.io/address/0x4829f3bbd5508707339547ebefface2b4c86d3b5#perps",
@@ -31,6 +32,15 @@ function cleanCell(value) {
     .replace(/\*\*/g, "")
     .replace(/\\/g, "")
     .trim();
+}
+
+function normalizeMoneyText(value) {
+  const cleaned = String(value || "").replace(/\s+/g, "").trim();
+  if (!cleaned || cleaned === "-") return "";
+  const negative = cleaned.includes("-");
+  const digits = cleaned.replace(/[^0-9.,]/g, "");
+  if (!digits) return cleaned;
+  return `${negative ? "-" : ""}$${digits}`;
 }
 
 function splitMarkdownRow(line) {
@@ -134,10 +144,15 @@ function parseLightLensTrader(markdown) {
     const symbol = row[0];
     return {
       symbol,
+      size: row[1] || "",
       side: sideFromText(row[2]),
+      leverage: "",
       position_value_usd: valueToNumber(row[4]),
-      entry: row[3],
-      unrealized_pnl: row[5],
+      entry: normalizeMoneyText(row[3]),
+      mark: "",
+      unrealized_pnl: normalizeMoneyText(row[5]),
+      funding: "",
+      liquidation: "",
       category: categoryFor(symbol),
     };
   }).filter((position) => position.symbol && position.side !== "unknown");
@@ -151,14 +166,14 @@ function parseHypurrscanTrader(markdown) {
     return {
       symbol,
       side: sideFromText(row[1]),
-      leverage: row[2],
+      leverage: row[2] || "",
       position_value_usd: valueToNumber(row[3]),
-      size: row[4],
-      entry: row[5],
-      mark: row[7],
-      unrealized_pnl: row[8],
-      funding: row[9],
-      liquidation: row[10],
+      size: row[4] || "",
+      entry: normalizeMoneyText(row[5]),
+      mark: normalizeMoneyText(row[7]),
+      unrealized_pnl: normalizeMoneyText(row[8]),
+      funding: normalizeMoneyText(row[9]),
+      liquidation: normalizeMoneyText(row[10]),
       category: categoryFor(symbol),
     };
   }).filter((position) => position.symbol && position.side !== "unknown");
@@ -265,12 +280,17 @@ function parseLighterPool(markdown) {
   };
 }
 
+function withPositionSource(positions, source) {
+  return positions.map((position) => ({ ...position, source }));
+}
+
 export async function collectMarketViewInput({ outputDir = join("runs", "market-view", "live-source-cache") } = {}) {
   const cacheDir = join(outputDir, "sources");
   await mkdir(cacheDir, { recursive: true });
 
-  const [hansolar, giver, erebos, coinbender, smallcap, nyp, coinsense, hyperdash] = await Promise.all([
+  const [hansolar, hansolarHypurrscan, giver, erebos, coinbender, smallcap, nyp, coinsense, hyperdash] = await Promise.all([
     scrapeMarkdown(urls.hansolar, { outputDir: cacheDir, name: "hansolar" }),
+    scrapeMarkdown(urls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
     scrapeMarkdown(urls.giver, { outputDir: cacheDir, name: "giver" }),
     scrapeMarkdown(urls.erebos911, { outputDir: cacheDir, name: "erebos911" }),
     scrapeMarkdown(urls.coinbender, { outputDir: cacheDir, name: "coinbender" }),
@@ -291,9 +311,12 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
       {
         name: "Hansolar",
         display_name: "Hansolar ⭐",
-        source: "LightLens",
-        account_stats: "Live scrape maxAge=0",
-        positions: parseLightLensTrader(hansolar.markdown),
+        source: "LightLens + Hypurrscan",
+        account_stats: `Live scrape maxAge=0 | LightLens ${parseLightLensTrader(hansolar.markdown).length} rows | Hypurrscan ${parseHypurrscanTrader(hansolarHypurrscan.markdown).length} rows`,
+        positions: [
+          ...withPositionSource(parseLightLensTrader(hansolar.markdown), "LightLens"),
+          ...withPositionSource(parseHypurrscanTrader(hansolarHypurrscan.markdown), "Hypurrscan"),
+        ],
       },
       {
         name: "Giver",

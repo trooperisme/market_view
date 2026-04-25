@@ -368,30 +368,55 @@ function quickReadFor(analysis, displayName) {
 function renderPositionTable(trader) {
   if (!trader.positions?.length) return "";
 
+  const hasSourceColumn = trader.positions.some((position) => position.source);
+  const hasLeverageColumn = trader.positions.some((position) => position.leverage);
+  const hasSizeColumn = trader.positions.some((position) => position.size);
+  const hasEntryColumn = trader.positions.some((position) => position.entry);
+  const hasUnrealizedPnlColumn = trader.positions.some((position) => position.unrealized_pnl);
   const rows = trader.positions.map((position) => {
     const value = money(position.position_value_usd);
-    const size = position.size ? ` | ${position.size}` : "";
-    const entry = position.entry ? ` | ${position.entry}` : "";
-    const mark = position.mark ? ` | ${position.mark}` : "";
-    const pnl = position.unrealized_pnl ? ` | ${position.unrealized_pnl}` : "";
-    if (size || entry || mark || pnl) {
-      return `| ${position.symbol} | ${sideLabel(position.side)} | ${size.slice(3) || "-"} | ${value} | ${position.entry || "-"} | ${position.mark || "-"} | ${position.unrealized_pnl || "-"} |`;
-    }
-    return `| ${position.symbol} | ${sideLabel(position.side)} | ${value} |`;
+    const source = hasSourceColumn ? `| ${position.source || "-"} ` : "";
+    const cells = [`| ${position.symbol} `];
+    if (hasSourceColumn) cells.push(`${position.source || "-"} `);
+    cells.push(`${sideLabel(position.side)} `);
+    if (hasLeverageColumn) cells.push(`${position.leverage || "-"} `);
+    if (hasSizeColumn) cells.push(`${position.size || "-"} `);
+    cells.push(`${value} `);
+    if (hasEntryColumn) cells.push(`${position.entry || "-"} `);
+    if (hasUnrealizedPnlColumn) cells.push(`${position.unrealized_pnl || "-"} `);
+    return `${cells.join("| ")}|`;
   });
 
-  const hasDetailedRows = trader.positions.some((position) => position.size || position.entry || position.mark || position.unrealized_pnl);
-  if (hasDetailedRows) {
-    return [
-      "| Symbol | Side | Size | Position Value | Entry | Mark | Unrealized PnL |",
-      "|---|---|---:|---:|---:|---:|---:|",
-      ...rows,
-    ].join("\n");
+  const header = ["Symbol"];
+  const divider = ["---"];
+  if (hasSourceColumn) {
+    header.push("Source");
+    divider.push("---");
+  }
+  header.push("Side");
+  divider.push("---");
+  if (hasLeverageColumn) {
+    header.push("Leverage");
+    divider.push("---");
+  }
+  if (hasSizeColumn) {
+    header.push("Size");
+    divider.push("---:");
+  }
+  header.push("Position Value");
+  divider.push("---:");
+  if (hasEntryColumn) {
+    header.push("Entry");
+    divider.push("---:");
+  }
+  if (hasUnrealizedPnlColumn) {
+    header.push("Unrealized PnL");
+    divider.push("---:");
   }
 
   return [
-    "| Symbol | Side | Position Value |",
-    "|---|---|---:|",
+    `| ${header.join(" | ")} |`,
+    `| ${divider.join(" | ")} |`,
     ...rows,
   ].join("\n");
 }

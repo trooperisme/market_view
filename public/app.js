@@ -24,7 +24,9 @@ function escapeHtml(value) {
 function inlineMarkdown(value) {
   return escapeHtml(value)
     .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\bLong ↑\b/g, '<span class="side-badge side-badge-long">Long ↑</span>')
+    .replace(/\bShort ↓\b/g, '<span class="side-badge side-badge-short">Short ↓</span>');
 }
 
 function resolveReportAsset(src) {
