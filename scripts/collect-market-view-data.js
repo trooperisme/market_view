@@ -14,7 +14,10 @@ const urls = {
   erebos911: "https://hypurrscan.io/address/0x79cc76364b5fb263a25bd52930e3d9788fcfeea8#perps",
   coinbender: "https://hypurrscan.io/address/0x4829f3bbd5508707339547ebefface2b4c86d3b5#perps",
   smallcap: "https://hypurrscan.io/address/0x93f8e02c6cf992e262069d5f5bb9b80033a5ce77#perps",
-  nyp: "https://app.lighter.xyz/public-pools/281474976624925",
+  degenDuck: "https://hypurrscan.io/address/0x2bf39a1004ff433938a5f933a44b8dad377937f6#perps",
+  tommy: "https://hypurrscan.io/address/0x83b1385d8126ecf64bfb3b4254d67eb9db753bcc#perps",
+  bmwball56: "https://hypurrscan.io/address/0xaf6f7a06f7bfb3bdf7bcd2c751564f4990d1efc7#perps",
+  tagCapital: "https://hypurrscan.io/address/0x5f94a51948d2376ad34a6fadfa2544e651b74b96#perps",
   coinsense: "https://www.coinsense.app/vault",
   hyperdash: "https://hyperdash.com/explore",
 };
@@ -239,6 +242,7 @@ function parseHyperdashCohorts(markdown) {
     const pnlRange = parts.find((part) => /PNL$/.test(part)) || "";
     const arrow = sentiment.includes("Bearish") ? "↓" : sentiment.includes("Bullish") ? "↑" : "→";
     blocks.set(slug, {
+      slug,
       cohort: `
 ${expectedBySlug.get(slug)} (${pnlRange})`.trim(),
       sentiment: `
@@ -251,35 +255,6 @@ ${sentiment} ${arrow}`.trim(),
   return expected.map(([slug]) => blocks.get(slug)).filter(Boolean);
 }
 
-function parseLighterPool(markdown) {
-  const apr = markdown.match(/APR\s+([\d.]+%)/s)?.[1] || markdown.match(/APR\s*\n\s*([\d.]+%)/s)?.[1] || "Unavailable";
-  const tvl = markdown.match(/TVL\s+(\$[\d,.]+)/s)?.[1] || markdown.match(/TVL\s*\n\s*(\$[\d,.]+)/s)?.[1] || "Unavailable";
-  const positionCount = markdown.match(/Positions \((\d+)\)/)?.[1] || "unknown";
-  const table = extractTables(markdown).find((candidate) => candidate.header.includes("Market") && candidate.header.includes("Position Value"));
-  const positions = (table?.rows || []).filter((row) => row.length >= 9 && row[0]).map((row) => ({
-    symbol: row[0],
-    side: String(row[1] || row[0]).toUpperCase().includes("BTC") ? "short" : "unknown",
-    size: row[1],
-    position_value_usd: valueToNumber(row[2]),
-    entry: row[3],
-    mark: row[4],
-    liquidation: row[5],
-    unrealized_pnl: row[6],
-    margin: row[7],
-    funding: row[8],
-    category: categoryFor(row[0]),
-  })).filter((position) => position.position_value_usd > 0);
-
-  return {
-    name: "NYP_Not Your Pool",
-    display_name: "NYP — Not YOUR Pool",
-    source: "Lighter.xyz",
-    account_stats: `APR ${apr} | TVL ${tvl} | Positions (${positionCount}) | live text rows ${positions.length ? "available" : "unavailable"}`,
-    status: positions.length ? undefined : "positions_unavailable",
-    positions,
-  };
-}
-
 function withPositionSource(positions, source) {
   return positions.map((position) => ({ ...position, source }));
 }
@@ -288,16 +263,19 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
   const cacheDir = join(outputDir, "sources");
   await mkdir(cacheDir, { recursive: true });
 
-  const [hansolar, hansolarHypurrscan, giver, erebos, coinbender, smallcap, nyp, coinsense, hyperdash] = await Promise.all([
+  const [hansolar, hansolarHypurrscan, giver, erebos, coinbender, smallcap, degenDuck, tommy, bmwball56, tagCapital, coinsense, hyperdash] = await Promise.all([
     scrapeMarkdown(urls.hansolar, { outputDir: cacheDir, name: "hansolar" }),
     scrapeMarkdown(urls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
     scrapeMarkdown(urls.giver, { outputDir: cacheDir, name: "giver" }),
     scrapeMarkdown(urls.erebos911, { outputDir: cacheDir, name: "erebos911" }),
     scrapeMarkdown(urls.coinbender, { outputDir: cacheDir, name: "coinbender" }),
     scrapeMarkdown(urls.smallcap, { outputDir: cacheDir, name: "smallcap" }),
-    scrapeMarkdown(urls.nyp, { outputDir: cacheDir, name: "nyp" }),
+    scrapeMarkdown(urls.degenDuck, { outputDir: cacheDir, name: "degenduck" }),
+    scrapeMarkdown(urls.tommy, { outputDir: cacheDir, name: "tommy" }),
+    scrapeMarkdown(urls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
+    scrapeMarkdown(urls.tagCapital, { outputDir: cacheDir, name: "tag-capital" }),
     scrapeMarkdown(urls.coinsense, { outputDir: cacheDir, name: "coinsense", formats: ["markdown", "screenshot"] }),
-    scrapeMarkdown(urls.hyperdash, { outputDir: cacheDir, name: "hyperdash" }),
+    scrapeMarkdown(urls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
 
   const input = {
@@ -347,10 +325,42 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
         account_stats: "Live scrape maxAge=0",
         positions: parseHypurrscanTrader(smallcap.markdown),
       },
-      parseLighterPool(nyp.markdown),
+      {
+        name: "DegenDuck",
+        display_name: "DegenDuck",
+        source: "Hypurrscan",
+        account_stats: "Live scrape maxAge=0",
+        status: parseHypurrscanTrader(degenDuck.markdown).length ? undefined : "no_active_positions",
+        positions: parseHypurrscanTrader(degenDuck.markdown),
+      },
+      {
+        name: "tommy",
+        display_name: "tommy",
+        source: "Hypurrscan",
+        account_stats: "Live scrape maxAge=0",
+        status: parseHypurrscanTrader(tommy.markdown).length ? undefined : "no_active_positions",
+        positions: parseHypurrscanTrader(tommy.markdown),
+      },
+      {
+        name: "bmwball56",
+        display_name: "bmwball56",
+        source: "Hypurrscan",
+        account_stats: "Live scrape maxAge=0",
+        status: parseHypurrscanTrader(bmwball56.markdown).length ? undefined : "no_active_positions",
+        positions: parseHypurrscanTrader(bmwball56.markdown),
+      },
+      {
+        name: "Tag Capital",
+        display_name: "Tag Capital",
+        source: "Hypurrscan",
+        account_stats: "Live scrape maxAge=0",
+        status: parseHypurrscanTrader(tagCapital.markdown).length ? undefined : "no_active_positions",
+        positions: parseHypurrscanTrader(tagCapital.markdown),
+      },
     ],
     coinsense: parseCoinsense(coinsense.markdown),
     hyperdash_cohorts: parseHyperdashCohorts(hyperdash.markdown),
+    hyperdash_screenshot_url: hyperdash.screenshot || null,
   };
 
   await writeFile(join(outputDir, "live-input.json"), JSON.stringify(input, null, 2));

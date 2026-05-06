@@ -14,6 +14,14 @@ const DEFAULT_INPUT = "fixtures/market-view/mock-input.json";
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free";
 const COINSENSE_VAULT_URL = "https://www.coinsense.app/vault";
 const execFileAsync = promisify(execFile);
+const HYPERDASH_TREND_LAYOUT = [
+  { slug: "extremely_profitable", x: 496, y: 176, width: 175, height: 71 },
+  { slug: "very_profitable", x: 903, y: 176, width: 175, height: 71 },
+  { slug: "profitable", x: 1310, y: 176, width: 175, height: 71 },
+  { slug: "unprofitable", x: 1715, y: 176, width: 175, height: 71 },
+  { slug: "very_unprofitable", x: 496, y: 372, width: 175, height: 71 },
+  { slug: "rekt", x: 903, y: 372, width: 175, height: 71 },
+];
 
 async function loadEnvFile(path) {
   let text;
@@ -250,6 +258,50 @@ async function captureCoinsenseImage(outputDir, { embedImage = false } = {}) {
   }
 }
 
+function cropHyperdashTrendImages(buffer) {
+  const source = PNG.sync.read(buffer);
+  const scaleX = source.width / 1920;
+  const scaleY = source.height / 1080;
+
+  return HYPERDASH_TREND_LAYOUT.map((item) => ({
+    slug: item.slug,
+    image: cropPng(buffer, {
+      x: Math.round(item.x * scaleX),
+      y: Math.round(item.y * scaleY),
+      width: Math.round(item.width * scaleX),
+      height: Math.round(item.height * scaleY),
+    }),
+  }));
+}
+
+async function captureHyperdashTrendImages(outputDir, screenshotUrl, { embedImages = false } = {}) {
+  if (!screenshotUrl) return new Map();
+
+  const assetsDir = join(outputDir, "assets");
+  await mkdir(assetsDir, { recursive: true });
+
+  try {
+    const response = await fetch(screenshotUrl);
+    if (!response.ok) throw new Error(`Hyperdash screenshot download failed: ${response.status}`);
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    const crops = cropHyperdashTrendImages(imageBuffer);
+    const trendMap = new Map();
+
+    for (const crop of crops) {
+      const fileName = `hyperdash-trend-${crop.slug}.png`;
+      await writeFile(join(assetsDir, fileName), crop.image);
+      trendMap.set(crop.slug, embedImages
+        ? `data:image/png;base64,${crop.image.toString("base64")}`
+        : `assets/${fileName}`);
+    }
+
+    return trendMap;
+  } catch (error) {
+    await writeFile(join(outputDir, "hyperdash-trend-error.txt"), error.message);
+    return new Map();
+  }
+}
+
 function cohortValueInMillions(value) {
   const raw = String(value || "").replace(/[$,]/g, "").trim();
   const parsed = Number(raw.replace(/[MK]$/i, ""));
@@ -467,19 +519,22 @@ function renderReport(input, analysis, model) {
   lines.push(`Longs Ratio: ${input.coinsense.longs_ratio}`);
   lines.push(`Shorts Ratio: ${input.coinsense.shorts_ratio}`);
   lines.push("");
+  lines.push("Top 5 positions:");
+  lines.push("");
   lines.push("| # | Coin | Side | Size | Position Value | Unrealized PnL |");
   lines.push("|---:|---|---|---:|---:|---:|");
-  for (const position of input.coinsense.positions) {
+  for (const position of input.coinsense.positions.slice(0, 5)) {
     lines.push(`| ${position.rank} | ${position.coin} | ${position.side} ${sideArrow(position.side)} | ${position.size} | ${position.position_value} | ${position.unrealized_pnl} |`);
   }
 
   lines.push("");
   lines.push("## STEP 3 — Hyperdash Cohort Sentiment (All-Time PNL)");
   lines.push("");
-  lines.push("| Cohort | Sentiment | Long | Short |");
-  lines.push("|---|---|---:|---:|");
+  lines.push("| Segment | Bias | Long | Short | Trend |");
+  lines.push("|---|---|---:|---:|---|");
   for (const cohort of input.hyperdash_cohorts) {
-    lines.push(`| ${cohort.cohort} | ${cohort.sentiment} | ${cohort.long} | ${cohort.short} |`);
+    const trendCell = cohort.trend_image?.path ? `[[img:${cohort.trend_image.path}]]` : "-";
+    lines.push(`| ${cohort.cohort} | ${cohort.sentiment} | ${cohort.long} | ${cohort.short} | ${trendCell} |`);
   }
   lines.push("");
   lines.push(`Quick Conclusion: ${analysis.final_analysis.hyperdash_cohort_conclusion || fallbackHyperdashConclusion(input.hyperdash_comparison)}`);
@@ -524,6 +579,17 @@ export async function generateMarketViewReport({
   if (coinsenseImage) {
     input.coinsense.chart_image = await captureCoinsenseImage(resolvedOutputDir, { embedImage: embedImages });
   }
+  const hyperdashTrendMap = await captureHyperdashTrendImages(
+    resolvedOutputDir,
+    input.hyperdash_screenshot_url,
+    { embedImages },
+  );
+  input.hyperdash_cohorts = (input.hyperdash_cohorts || []).map((cohort) => ({
+    ...cohort,
+    trend_image: hyperdashTrendMap.has(cohort.slug)
+      ? { path: hyperdashTrendMap.get(cohort.slug), source: "Hyperdash screenshot crop" }
+      : null,
+  }));
   await writeFile(join(resolvedOutputDir, "normalized-input.json"), JSON.stringify(input, null, 2));
 
   const result = await callOpenRouter({ model, input });

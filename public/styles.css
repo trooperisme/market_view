@@ -382,6 +382,15 @@ select {
   color: #ff4d5a;
 }
 
+.trend-mini {
+  display: block;
+  width: 164px;
+  min-width: 164px;
+  height: auto;
+  border-radius: 4px;
+  background: #11140f;
+}
+
 .empty-state {
   margin: 0;
   color: var(--muted);

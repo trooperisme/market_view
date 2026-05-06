@@ -4,19 +4,64 @@
   "traders": [
     {
       "name": "Hansolar",
-      "display_name": "Hansolar ⭐",
+      "display_name": "Hansolar \u2b50",
       "source": "LightLens",
       "account_stats": "active positions visible | favorite trader watchlist",
       "positions": [
-        { "symbol": "BTC", "side": "short", "position_value_usd": 306032.4, "category": "crypto" },
-        { "symbol": "SOL", "side": "short", "position_value_usd": 52377.6, "category": "crypto" },
-        { "symbol": "DOT", "side": "short", "position_value_usd": 39035.1, "category": "crypto" },
-        { "symbol": "ONDO", "side": "short", "position_value_usd": 1063.64, "category": "crypto" },
-        { "symbol": "XAU", "side": "long", "position_value_usd": 241192, "category": "macro" },
-        { "symbol": "XCU", "side": "long", "position_value_usd": 27616.95, "category": "macro" },
-        { "symbol": "URA", "side": "long", "position_value_usd": 17666.64, "category": "macro" },
-        { "symbol": "HYPE", "side": "long", "position_value_usd": 4472.6, "category": "crypto" },
-        { "symbol": "WTI", "side": "long", "position_value_usd": 2543.85, "category": "macro" }
+        {
+          "symbol": "BTC",
+          "side": "short",
+          "position_value_usd": 306032.4,
+          "category": "crypto"
+        },
+        {
+          "symbol": "SOL",
+          "side": "short",
+          "position_value_usd": 52377.6,
+          "category": "crypto"
+        },
+        {
+          "symbol": "DOT",
+          "side": "short",
+          "position_value_usd": 39035.1,
+          "category": "crypto"
+        },
+        {
+          "symbol": "ONDO",
+          "side": "short",
+          "position_value_usd": 1063.64,
+          "category": "crypto"
+        },
+        {
+          "symbol": "XAU",
+          "side": "long",
+          "position_value_usd": 241192,
+          "category": "macro"
+        },
+        {
+          "symbol": "XCU",
+          "side": "long",
+          "position_value_usd": 27616.95,
+          "category": "macro"
+        },
+        {
+          "symbol": "URA",
+          "side": "long",
+          "position_value_usd": 17666.64,
+          "category": "macro"
+        },
+        {
+          "symbol": "HYPE",
+          "side": "long",
+          "position_value_usd": 4472.6,
+          "category": "crypto"
+        },
+        {
+          "symbol": "WTI",
+          "side": "long",
+          "position_value_usd": 2543.85,
+          "category": "macro"
+        }
       ]
     },
     {
@@ -25,8 +70,18 @@
       "source": "Hyperdash Legacy",
       "account_stats": "All-Time PnL +$507.9K | Win Rate 56.5% | 30D Win Rate 13% | Direction Bias: Bullish",
       "positions": [
-        { "symbol": "BTC", "side": "long", "position_value_usd": 134823.65, "category": "crypto" },
-        { "symbol": "ASTER", "side": "short", "position_value_usd": 65177.37, "category": "crypto" }
+        {
+          "symbol": "BTC",
+          "side": "long",
+          "position_value_usd": 134823.65,
+          "category": "crypto"
+        },
+        {
+          "symbol": "ASTER",
+          "side": "short",
+          "position_value_usd": 65177.37,
+          "category": "crypto"
+        }
       ]
     },
     {
@@ -42,9 +97,24 @@
       "display_name": "coinbender_lfg",
       "source": "Hypurrscan",
       "positions": [
-        { "symbol": "BTC", "side": "short", "position_value_usd": 81313.08, "category": "crypto" },
-        { "symbol": "ZEC", "side": "short", "position_value_usd": 9114.06, "category": "crypto" },
-        { "symbol": "xyz:BRENTOIL", "side": "long", "position_value_usd": 10036.28, "category": "macro" }
+        {
+          "symbol": "BTC",
+          "side": "short",
+          "position_value_usd": 81313.08,
+          "category": "crypto"
+        },
+        {
+          "symbol": "ZEC",
+          "side": "short",
+          "position_value_usd": 9114.06,
+          "category": "crypto"
+        },
+        {
+          "symbol": "xyz:BRENTOIL",
+          "side": "long",
+          "position_value_usd": 10036.28,
+          "category": "macro"
+        }
       ]
     },
     {
@@ -52,34 +122,11 @@
       "display_name": "SmallCapScientist",
       "source": "Hypurrscan",
       "positions": [
-        { "symbol": "xyz:CL", "side": "long", "position_value_usd": 42352, "category": "macro" }
-      ]
-    },
-    {
-      "name": "NYP_Not Your Pool",
-      "display_name": "NYP — Not YOUR Pool",
-      "source": "Lighter.xyz",
-      "account_stats": "APR 117.57% | TVL $1,126,716.11 | 2 active positions",
-      "positions": [
         {
-          "symbol": "WTI20x",
+          "symbol": "xyz:CL",
           "side": "long",
-          "size": "20,000.000",
-          "position_value_usd": 1734580,
-          "entry": "88.450",
-          "mark": "86.729",
-          "unrealized_pnl": "-$33,700.01",
+          "position_value_usd": 42352,
           "category": "macro"
-        },
-        {
-          "symbol": "BTC30x",
-          "side": "short",
-          "size": "20.00000",
-          "position_value_usd": 1504104,
-          "entry": "70,750.4",
-          "mark": "75,205.2",
-          "unrealized_pnl": "-$89,096.01",
-          "category": "crypto"
         }
       ]
     }
@@ -90,24 +137,124 @@
     "longs_ratio": "39.0%",
     "shorts_ratio": "61.0%",
     "positions": [
-      { "rank": 1, "coin": "ETH", "side": "short", "size": "-0.4273", "position_value": "-$989.80", "unrealized_pnl": "-$32.15" },
-      { "rank": 2, "coin": "HYPE", "side": "long", "size": "10.7400", "position_value": "$464.74", "unrealized_pnl": "-$11.23" },
-      { "rank": 3, "coin": "BIO", "side": "long", "size": "12373.0000", "position_value": "$391.78", "unrealized_pnl": "$5.57" },
-      { "rank": 4, "coin": "SOL", "side": "long", "size": "4.0200", "position_value": "$341.02", "unrealized_pnl": "-$4.43" },
-      { "rank": 5, "coin": "LINK", "side": "short", "size": "-28.0000", "position_value": "-$256.78", "unrealized_pnl": "-$4.47" },
-      { "rank": 6, "coin": "DOGE", "side": "short", "size": "-2561.0000", "position_value": "-$240.92", "unrealized_pnl": "$5.49" },
-      { "rank": 7, "coin": "ZEC", "side": "long", "size": "0.5700", "position_value": "$184.00", "unrealized_pnl": "-$8.48" },
-      { "rank": 8, "coin": "PURR", "side": "short", "size": "-2211.0000", "position_value": "-$174.31", "unrealized_pnl": "$5.93" },
-      { "rank": 9, "coin": "BTC", "side": "long", "size": "0.0023", "position_value": "$170.67", "unrealized_pnl": "-$1.35" },
-      { "rank": 10, "coin": "XMR", "side": "long", "size": "0.4810", "position_value": "$170.21", "unrealized_pnl": "$2.30" }
+      {
+        "rank": 1,
+        "coin": "ETH",
+        "side": "short",
+        "size": "-0.4273",
+        "position_value": "-$989.80",
+        "unrealized_pnl": "-$32.15"
+      },
+      {
+        "rank": 2,
+        "coin": "HYPE",
+        "side": "long",
+        "size": "10.7400",
+        "position_value": "$464.74",
+        "unrealized_pnl": "-$11.23"
+      },
+      {
+        "rank": 3,
+        "coin": "BIO",
+        "side": "long",
+        "size": "12373.0000",
+        "position_value": "$391.78",
+        "unrealized_pnl": "$5.57"
+      },
+      {
+        "rank": 4,
+        "coin": "SOL",
+        "side": "long",
+        "size": "4.0200",
+        "position_value": "$341.02",
+        "unrealized_pnl": "-$4.43"
+      },
+      {
+        "rank": 5,
+        "coin": "LINK",
+        "side": "short",
+        "size": "-28.0000",
+        "position_value": "-$256.78",
+        "unrealized_pnl": "-$4.47"
+      },
+      {
+        "rank": 6,
+        "coin": "DOGE",
+        "side": "short",
+        "size": "-2561.0000",
+        "position_value": "-$240.92",
+        "unrealized_pnl": "$5.49"
+      },
+      {
+        "rank": 7,
+        "coin": "ZEC",
+        "side": "long",
+        "size": "0.5700",
+        "position_value": "$184.00",
+        "unrealized_pnl": "-$8.48"
+      },
+      {
+        "rank": 8,
+        "coin": "PURR",
+        "side": "short",
+        "size": "-2211.0000",
+        "position_value": "-$174.31",
+        "unrealized_pnl": "$5.93"
+      },
+      {
+        "rank": 9,
+        "coin": "BTC",
+        "side": "long",
+        "size": "0.0023",
+        "position_value": "$170.67",
+        "unrealized_pnl": "-$1.35"
+      },
+      {
+        "rank": 10,
+        "coin": "XMR",
+        "side": "long",
+        "size": "0.4810",
+        "position_value": "$170.21",
+        "unrealized_pnl": "$2.30"
+      }
     ]
   },
   "hyperdash_cohorts": [
-    { "cohort": "Extremely Profitable (+$1M+ PNL)", "sentiment": "Slightly Bearish ↓", "long": "$338.58M", "short": "$570.52M" },
-    { "cohort": "Very Profitable (+$100K to +$1M PNL)", "sentiment": "Bullish ↑", "long": "$326.42M", "short": "$227.41M" },
-    { "cohort": "Profitable ($0 to +$100K PNL)", "sentiment": "Bullish ↑", "long": "$288.63M", "short": "$213.03M" },
-    { "cohort": "Unprofitable ($0 to -$100K PNL)", "sentiment": "Neutral →", "long": "$306.71M", "short": "$337.09M" },
-    { "cohort": "Very Unprofitable (-$100K to -$1M PNL)", "sentiment": "Slightly Bullish ↑", "long": "$258.54M", "short": "$237.76M" },
-    { "cohort": "Rekt (-$1M+ PNL)", "sentiment": "Bullish ↑", "long": "$386.84M", "short": "$237.72M" }
+    {
+      "cohort": "Extremely Profitable (+$1M+ PNL)",
+      "sentiment": "Slightly Bearish \u2193",
+      "long": "$338.58M",
+      "short": "$570.52M"
+    },
+    {
+      "cohort": "Very Profitable (+$100K to +$1M PNL)",
+      "sentiment": "Bullish \u2191",
+      "long": "$326.42M",
+      "short": "$227.41M"
+    },
+    {
+      "cohort": "Profitable ($0 to +$100K PNL)",
+      "sentiment": "Bullish \u2191",
+      "long": "$288.63M",
+      "short": "$213.03M"
+    },
+    {
+      "cohort": "Unprofitable ($0 to -$100K PNL)",
+      "sentiment": "Neutral \u2192",
+      "long": "$306.71M",
+      "short": "$337.09M"
+    },
+    {
+      "cohort": "Very Unprofitable (-$100K to -$1M PNL)",
+      "sentiment": "Slightly Bullish \u2191",
+      "long": "$258.54M",
+      "short": "$237.76M"
+    },
+    {
+      "cohort": "Rekt (-$1M+ PNL)",
+      "sentiment": "Bullish \u2191",
+      "long": "$386.84M",
+      "short": "$237.72M"
+    }
   ]
 }

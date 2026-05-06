@@ -25,6 +25,7 @@ function inlineMarkdown(value) {
   return escapeHtml(value)
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[\[img:([^\]]+)]]/g, (_, src) => `<img class="trend-mini" src="${escapeHtml(resolveReportAsset(src))}" alt="Trend graph" loading="lazy" />`)
     .replace(/\bLong ↑\b/g, '<span class="side-badge side-badge-long">Long ↑</span>')
     .replace(/\bShort ↓\b/g, '<span class="side-badge side-badge-short">Short ↓</span>');
 }
