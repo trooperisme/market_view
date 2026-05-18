@@ -8,8 +8,10 @@ const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || "https://api.firecraw
 const FRESH_MAX_AGE_MS = 0;
 
 const urls = {
-  hansolar: "https://lightlens.vercel.app/traders/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db",
   hansolarHypurrscan: "https://hypurrscan.io/address/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db#perps",
+  hansolarLighter: "https://app.lighter.xyz/public-pools/281474976694250",
+  nypLighter: "https://app.lighter.xyz/public-pools/281474976624925",
+  kPoolLighter: "https://app.lighter.xyz/public-pools/281474976680237",
   giver: "https://legacy.hyperdash.com/trader/0x8fc7c0442e582bca195978c5a4fdec2e7c5bb0f7",
   erebos911: "https://hypurrscan.io/address/0x79cc76364b5fb263a25bd52930e3d9788fcfeea8#perps",
   coinbender: "https://hypurrscan.io/address/0x4829f3bbd5508707339547ebefface2b4c86d3b5#perps",
@@ -17,7 +19,6 @@ const urls = {
   degenDuck: "https://hypurrscan.io/address/0x2bf39a1004ff433938a5f933a44b8dad377937f6#perps",
   tommy: "https://hypurrscan.io/address/0x83b1385d8126ecf64bfb3b4254d67eb9db753bcc#perps",
   bmwball56: "https://hypurrscan.io/address/0xaf6f7a06f7bfb3bdf7bcd2c751564f4990d1efc7#perps",
-  tagCapital: "https://hypurrscan.io/address/0x5f94a51948d2376ad34a6fadfa2544e651b74b96#perps",
   coinsense: "https://www.coinsense.app/vault",
   hyperdash: "https://hyperdash.com/explore",
 };
@@ -107,6 +108,7 @@ async function scrapeMarkdown(url, { outputDir, name, formats = ["markdown"], wa
     if (!response.ok) throw new Error(`Firecrawl scrape failed for ${name}: ${response.status} ${JSON.stringify(body)}`);
     return {
       markdown: body.markdown || body.data?.markdown || "",
+      html: body.html || body.data?.html || "",
       screenshot: body.screenshot || body.data?.screenshot || null,
       raw: body,
     };
@@ -135,30 +137,10 @@ async function scrapeMarkdown(url, { outputDir, name, formats = ["markdown"], wa
   const parsed = JSON.parse(content);
   return {
     markdown: parsed.markdown || parsed.data?.markdown || "",
+    html: parsed.html || parsed.data?.html || "",
     screenshot: parsed.screenshot || parsed.data?.screenshot || null,
     raw: parsed,
   };
-}
-
-function parseLightLensTrader(markdown) {
-  const table = extractTables(markdown).find((candidate) => candidate.header.includes("Symbol") && candidate.header.includes("Position Value"));
-  if (!table) return [];
-  return table.rows.map((row) => {
-    const symbol = row[0];
-    return {
-      symbol,
-      size: row[1] || "",
-      side: sideFromText(row[2]),
-      leverage: "",
-      position_value_usd: valueToNumber(row[4]),
-      entry: normalizeMoneyText(row[3]),
-      mark: "",
-      unrealized_pnl: normalizeMoneyText(row[5]),
-      funding: "",
-      liquidation: "",
-      category: categoryFor(symbol),
-    };
-  }).filter((position) => position.symbol && position.side !== "unknown");
 }
 
 function parseHypurrscanTrader(markdown) {
@@ -190,6 +172,74 @@ function parseGiverTrader(markdown) {
   if (btc) positions.push({ symbol: "BTC", side: btc[1].trim().startsWith("-") ? "short" : "long", size: btc[1].trim(), position_value_usd: valueToNumber(btc[2]), category: "crypto" });
   if (aster) positions.push({ symbol: "ASTER", side: aster[1].trim().startsWith("-") ? "short" : "long", size: aster[1].trim(), position_value_usd: valueToNumber(aster[2]), category: "crypto" });
   return positions;
+}
+
+function stripHtml(value) {
+  return String(value || "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseLighterMarket(value) {
+  const market = cleanCell(value);
+  const leverage = market.match(/(\d+x)$/i)?.[1] || "";
+  const symbol = market.replace(/\s*\d+x$/i, "").trim();
+  return { market, symbol, leverage };
+}
+
+function parseLighterPool(markdown, html = "") {
+  const rows = [...html.matchAll(/<tr[^>]*data-index="(\d+)"[\s\S]*?<\/tr>/g)]
+    .map((match) => {
+      const rowHtml = match[0];
+      const side = rowHtml.includes('data-testid="direction-short"')
+        ? "short"
+        : rowHtml.includes('data-testid="direction-long"') ? "long" : "unknown";
+      const cell = (field) => stripHtml(rowHtml.match(new RegExp(`data-testid="row-\\d+-cell-\\d+_${field}"[^>]*>([\\s\\S]*?)<\\/td>`))?.[1] || "");
+      const { symbol, leverage } = parseLighterMarket(cell("marketSymbol"));
+      return {
+        symbol,
+        side,
+        leverage,
+        size: cell("sizeCoin"),
+        position_value_usd: valueToNumber(cell("sizeUsd")),
+        entry: normalizeMoneyText(cell("avgEntryPrice")),
+        mark: normalizeMoneyText(cell("markPrice")),
+        unrealized_pnl: normalizeMoneyText(cell("unrealizedPnl").replace(/\s+\([^)]+\)/, "")),
+        funding: normalizeMoneyText(cell("funding")),
+        liquidation: normalizeMoneyText(cell("liquidationPrice")),
+        category: categoryFor(symbol),
+      };
+    })
+    .filter((position) => position.symbol && position.side !== "unknown");
+
+  if (rows.length) return rows;
+
+  const table = extractTables(markdown).find((candidate) => candidate.header.includes("Market") && candidate.header.includes("Position Value"));
+  return (table?.rows || []).map((row) => {
+    const { symbol, leverage } = parseLighterMarket(row[0]);
+    return {
+      symbol,
+      side: "unknown",
+      leverage,
+      size: row[1] || "",
+      position_value_usd: valueToNumber(row[2]),
+      entry: normalizeMoneyText(row[3]),
+      mark: normalizeMoneyText(row[4]),
+      unrealized_pnl: normalizeMoneyText(String(row[6] || "").replace(/\s+\([^)]+\)/, "")),
+      funding: normalizeMoneyText(row[8]),
+      liquidation: normalizeMoneyText(row[5]),
+      category: categoryFor(symbol),
+    };
+  }).filter((position) => position.symbol && position.side !== "unknown");
+}
+
+function parseLighterPoolStats(markdown, positions) {
+  const apr = markdown.match(/APR\s+([\d.]+%)/s)?.[1] || "Unavailable";
+  const tvl = markdown.match(/TVL\s+(\$[\d,.]+)/s)?.[1] || "Unavailable";
+  return `APR ${apr} | TVL ${tvl} | ${positions.length} active position${positions.length === 1 ? "" : "s"}`;
 }
 
 function parseCoinsense(markdown) {
@@ -263,9 +313,11 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
   const cacheDir = join(outputDir, "sources");
   await mkdir(cacheDir, { recursive: true });
 
-  const [hansolar, hansolarHypurrscan, giver, erebos, coinbender, smallcap, degenDuck, tommy, bmwball56, tagCapital, coinsense, hyperdash] = await Promise.all([
-    scrapeMarkdown(urls.hansolar, { outputDir: cacheDir, name: "hansolar" }),
+  const [hansolarHypurrscan, hansolarLighter, nypLighter, kPoolLighter, giver, erebos, coinbender, smallcap, degenDuck, tommy, bmwball56, coinsense, hyperdash] = await Promise.all([
     scrapeMarkdown(urls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
+    scrapeMarkdown(urls.hansolarLighter, { outputDir: cacheDir, name: "hansolar-lighter", formats: ["markdown", "html", "screenshot"], waitFor: 10000 }),
+    scrapeMarkdown(urls.nypLighter, { outputDir: cacheDir, name: "nyp-lighter", formats: ["markdown", "html", "screenshot"], waitFor: 10000 }),
+    scrapeMarkdown(urls.kPoolLighter, { outputDir: cacheDir, name: "k-pool-lighter", formats: ["markdown", "html", "screenshot"], waitFor: 10000 }),
     scrapeMarkdown(urls.giver, { outputDir: cacheDir, name: "giver" }),
     scrapeMarkdown(urls.erebos911, { outputDir: cacheDir, name: "erebos911" }),
     scrapeMarkdown(urls.coinbender, { outputDir: cacheDir, name: "coinbender" }),
@@ -273,10 +325,14 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     scrapeMarkdown(urls.degenDuck, { outputDir: cacheDir, name: "degenduck" }),
     scrapeMarkdown(urls.tommy, { outputDir: cacheDir, name: "tommy" }),
     scrapeMarkdown(urls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
-    scrapeMarkdown(urls.tagCapital, { outputDir: cacheDir, name: "tag-capital" }),
     scrapeMarkdown(urls.coinsense, { outputDir: cacheDir, name: "coinsense", formats: ["markdown", "screenshot"] }),
     scrapeMarkdown(urls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
+
+  const hansolarHypurrscanPositions = parseHypurrscanTrader(hansolarHypurrscan.markdown);
+  const hansolarLighterPositions = parseLighterPool(hansolarLighter.markdown, hansolarLighter.html);
+  const nypPositions = parseLighterPool(nypLighter.markdown, nypLighter.html);
+  const kPoolPositions = parseLighterPool(kPoolLighter.markdown, kPoolLighter.html);
 
   const input = {
     run_label: "Market View Live Scrape",
@@ -289,11 +345,11 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
       {
         name: "Hansolar",
         display_name: "Hansolar ⭐",
-        source: "LightLens + Hypurrscan",
-        account_stats: `Live scrape maxAge=0 | LightLens ${parseLightLensTrader(hansolar.markdown).length} rows | Hypurrscan ${parseHypurrscanTrader(hansolarHypurrscan.markdown).length} rows`,
+        source: "Hypurrscan + Lighter",
+        account_stats: `Live scrape maxAge=0 | Hypurrscan ${hansolarHypurrscanPositions.length} rows | Lighter ${hansolarLighterPositions.length} rows`,
         positions: [
-          ...withPositionSource(parseLightLensTrader(hansolar.markdown), "LightLens"),
-          ...withPositionSource(parseHypurrscanTrader(hansolarHypurrscan.markdown), "Hypurrscan"),
+          ...withPositionSource(hansolarHypurrscanPositions, "Hypurrscan"),
+          ...withPositionSource(hansolarLighterPositions, "Lighter"),
         ],
       },
       {
@@ -350,12 +406,20 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
         positions: parseHypurrscanTrader(bmwball56.markdown),
       },
       {
-        name: "Tag Capital",
-        display_name: "Tag Capital",
-        source: "Hypurrscan",
-        account_stats: "Live scrape maxAge=0",
-        status: parseHypurrscanTrader(tagCapital.markdown).length ? undefined : "no_active_positions",
-        positions: parseHypurrscanTrader(tagCapital.markdown),
+        name: "NYP",
+        display_name: "NYP — Not YOUR pool",
+        source: "Lighter Pool",
+        account_stats: parseLighterPoolStats(nypLighter.markdown, nypPositions),
+        status: nypPositions.length ? undefined : "positions_unavailable",
+        positions: nypPositions,
+      },
+      {
+        name: "K pool",
+        display_name: "K pool",
+        source: "Lighter Pool",
+        account_stats: parseLighterPoolStats(kPoolLighter.markdown, kPoolPositions),
+        status: kPoolPositions.length ? undefined : "positions_unavailable",
+        positions: kPoolPositions,
       },
     ],
     coinsense: parseCoinsense(coinsense.markdown),
