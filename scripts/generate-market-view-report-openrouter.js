@@ -13,6 +13,7 @@ await loadEnvFile(resolve(".env"));
 const DEFAULT_INPUT = "fixtures/market-view/mock-input.json";
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free";
 const COINSENSE_VAULT_URL = "https://www.coinsense.app/vault";
+const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS || 10000);
 const execFileAsync = promisify(execFile);
 const HYPERDASH_TREND_LAYOUT = [
   { slug: "extremely_profitable", x: 496, y: 176, width: 175, height: 71 },
@@ -229,15 +230,15 @@ async function scrapeCoinsenseScreenshot(scrapeOutputPath) {
   return scrape.screenshot || scrape.data?.screenshot;
 }
 
-async function captureCoinsenseImage(outputDir, { embedImage = false } = {}) {
+async function captureCoinsenseImage(outputDir, { embedImage = false, screenshotUrl = null } = {}) {
   const assetsDir = join(outputDir, "assets");
   await mkdir(assetsDir, { recursive: true });
   const scrapeOutputPath = join(outputDir, "coinsense-screenshot-scrape.json");
 
   try {
-    const screenshotUrl = await scrapeCoinsenseScreenshot(scrapeOutputPath);
-    if (!screenshotUrl) throw new Error("Firecrawl scrape returned no screenshot URL.");
-    const response = await fetch(screenshotUrl);
+    const sourceScreenshotUrl = screenshotUrl || await scrapeCoinsenseScreenshot(scrapeOutputPath);
+    if (!sourceScreenshotUrl) throw new Error("Firecrawl scrape returned no screenshot URL.");
+    const response = await fetch(sourceScreenshotUrl);
     if (!response.ok) throw new Error(`Screenshot download failed: ${response.status}`);
     const imageBuffer = Buffer.from(await response.arrayBuffer());
     const croppedImageBuffer = cropCoinsenseVaultSummary(imageBuffer);
@@ -364,6 +365,43 @@ ${JSON.stringify(input, null, 2)}
 `.trim();
 }
 
+function describeLargestPositions(trader, limit = 3) {
+  const positions = [...(trader.positions || [])]
+    .sort((a, b) => numericValue(b.position_value_usd) - numericValue(a.position_value_usd))
+    .slice(0, limit);
+  if (!positions.length) return "no active positions";
+  return positions.map((position) => `${position.symbol} ${position.side}`).join(", ");
+}
+
+function fallbackAnalysis(input, reason = "OpenRouter unavailable") {
+  const quickReads = (input.traders || []).map((trader) => ({
+    trader: trader.display_name,
+    text: `${trader.bias}; ${pct(trader.long_pct)} long versus ${pct(trader.short_pct)} short. Largest exposure: ${describeLargestPositions(trader)}.`,
+  }));
+  const coinsensePositions = input.coinsense?.positions || [];
+  const largestCoinsense = coinsensePositions[0]
+    ? `${coinsensePositions[0].coin} ${coinsensePositions[0].side} (${coinsensePositions[0].position_value})`
+    : "no active CoinSense position";
+
+  return {
+    quick_reads: quickReads,
+    final_analysis: {
+      hyperdash_cohort_conclusion: fallbackHyperdashConclusion(input.hyperdash_comparison),
+      crypto_signals: [
+        `Fallback analysis used because ${reason}.`,
+        "Read the trader tables directly for the highest-confidence signal.",
+      ],
+      macro_signals: [
+        "Macro signal is derived from positions tagged as commodity or macro symbols in the trader tables.",
+      ],
+      coinsense_summary: [
+        `CoinSense ratio: ${input.coinsense?.longs_ratio || "Unavailable"} long versus ${input.coinsense?.shorts_ratio || "Unavailable"} short.`,
+        `Largest listed CoinSense position: ${largestCoinsense}.`,
+      ],
+    },
+  };
+}
+
 function stripJsonFence(text) {
   return text
     .trim()
@@ -377,8 +415,11 @@ async function callOpenRouter({ model, input }) {
     throw new Error("OPENROUTER_API_KEY is not set. Add it to your shell environment or .env runtime.");
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
+    signal: controller.signal,
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
@@ -395,7 +436,7 @@ async function callOpenRouter({ model, input }) {
       ],
       temperature: 0.2,
     }),
-  });
+  }).finally(() => clearTimeout(timeout));
 
   const body = await response.json();
   if (!response.ok) {
@@ -577,7 +618,10 @@ export async function generateMarketViewReport({
     : JSON.parse(await readFile(resolve(inputPath), "utf8")));
   const input = buildComputedInput(rawInput);
   if (coinsenseImage) {
-    input.coinsense.chart_image = await captureCoinsenseImage(resolvedOutputDir, { embedImage: embedImages });
+    input.coinsense.chart_image = await captureCoinsenseImage(resolvedOutputDir, {
+      embedImage: embedImages,
+      screenshotUrl: input.coinsense_screenshot_url,
+    });
   }
   const hyperdashTrendMap = await captureHyperdashTrendImages(
     resolvedOutputDir,
@@ -592,8 +636,17 @@ export async function generateMarketViewReport({
   }));
   await writeFile(join(resolvedOutputDir, "normalized-input.json"), JSON.stringify(input, null, 2));
 
-  const result = await callOpenRouter({ model, input });
-  await writeFile(join(resolvedOutputDir, "openrouter-response.json"), JSON.stringify(result.raw, null, 2));
+  let result;
+  try {
+    result = await callOpenRouter({ model, input });
+    await writeFile(join(resolvedOutputDir, "openrouter-response.json"), JSON.stringify(result.raw, null, 2));
+  } catch (error) {
+    result = {
+      raw: { fallback: true, error: error.message },
+      parsed: fallbackAnalysis(input, error.message),
+    };
+    await writeFile(join(resolvedOutputDir, "openrouter-error.txt"), error.message);
+  }
   await writeFile(join(resolvedOutputDir, "analysis.json"), JSON.stringify(result.parsed, null, 2));
 
   const report = renderReport(input, result.parsed, model);

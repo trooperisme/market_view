@@ -90,6 +90,15 @@ function sideFromText(value) {
   return "unknown";
 }
 
+async function runLimited(tasks, limit = 5) {
+  const results = [];
+  for (let index = 0; index < tasks.length; index += limit) {
+    const batch = tasks.slice(index, index + limit);
+    results.push(...await Promise.all(batch.map((task) => task())));
+  }
+  return results;
+}
+
 async function scrapeMarkdown(url, { outputDir, name, formats = ["markdown"], waitFor = 7000 } = {}) {
   await mkdir(outputDir, { recursive: true });
   const outputPath = join(outputDir, `${name}.json`);
@@ -313,20 +322,34 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
   const cacheDir = join(outputDir, "sources");
   await mkdir(cacheDir, { recursive: true });
 
-  const [hansolarHypurrscan, hansolarLighter, nypLighter, kPoolLighter, giver, erebos, coinbender, smallcap, degenDuck, tommy, bmwball56, coinsense, hyperdash] = await Promise.all([
-    scrapeMarkdown(urls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
-    scrapeMarkdown(urls.hansolarLighter, { outputDir: cacheDir, name: "hansolar-lighter", formats: ["markdown", "html", "screenshot"], waitFor: 10000 }),
-    scrapeMarkdown(urls.nypLighter, { outputDir: cacheDir, name: "nyp-lighter", formats: ["markdown", "html", "screenshot"], waitFor: 10000 }),
-    scrapeMarkdown(urls.kPoolLighter, { outputDir: cacheDir, name: "k-pool-lighter", formats: ["markdown", "html", "screenshot"], waitFor: 10000 }),
-    scrapeMarkdown(urls.giver, { outputDir: cacheDir, name: "giver" }),
-    scrapeMarkdown(urls.erebos911, { outputDir: cacheDir, name: "erebos911" }),
-    scrapeMarkdown(urls.coinbender, { outputDir: cacheDir, name: "coinbender" }),
-    scrapeMarkdown(urls.smallcap, { outputDir: cacheDir, name: "smallcap" }),
-    scrapeMarkdown(urls.degenDuck, { outputDir: cacheDir, name: "degenduck" }),
-    scrapeMarkdown(urls.tommy, { outputDir: cacheDir, name: "tommy" }),
-    scrapeMarkdown(urls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
-    scrapeMarkdown(urls.coinsense, { outputDir: cacheDir, name: "coinsense", formats: ["markdown", "screenshot"] }),
-    scrapeMarkdown(urls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
+  const [
+    hansolarHypurrscan,
+    hansolarLighter,
+    nypLighter,
+    kPoolLighter,
+    giver,
+    erebos,
+    coinbender,
+    smallcap,
+    degenDuck,
+    tommy,
+    bmwball56,
+    coinsense,
+    hyperdash,
+  ] = await runLimited([
+    () => scrapeMarkdown(urls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
+    () => scrapeMarkdown(urls.hansolarLighter, { outputDir: cacheDir, name: "hansolar-lighter", formats: ["markdown", "html", "screenshot"] }),
+    () => scrapeMarkdown(urls.nypLighter, { outputDir: cacheDir, name: "nyp-lighter", formats: ["markdown", "html", "screenshot"] }),
+    () => scrapeMarkdown(urls.kPoolLighter, { outputDir: cacheDir, name: "k-pool-lighter", formats: ["markdown", "html", "screenshot"] }),
+    () => scrapeMarkdown(urls.giver, { outputDir: cacheDir, name: "giver" }),
+    () => scrapeMarkdown(urls.erebos911, { outputDir: cacheDir, name: "erebos911" }),
+    () => scrapeMarkdown(urls.coinbender, { outputDir: cacheDir, name: "coinbender" }),
+    () => scrapeMarkdown(urls.smallcap, { outputDir: cacheDir, name: "smallcap" }),
+    () => scrapeMarkdown(urls.degenDuck, { outputDir: cacheDir, name: "degenduck" }),
+    () => scrapeMarkdown(urls.tommy, { outputDir: cacheDir, name: "tommy" }),
+    () => scrapeMarkdown(urls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
+    () => scrapeMarkdown(urls.coinsense, { outputDir: cacheDir, name: "coinsense", formats: ["markdown", "screenshot"] }),
+    () => scrapeMarkdown(urls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
 
   const hansolarHypurrscanPositions = parseHypurrscanTrader(hansolarHypurrscan.markdown);
@@ -423,6 +446,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
       },
     ],
     coinsense: parseCoinsense(coinsense.markdown),
+    coinsense_screenshot_url: coinsense.screenshot || null,
     hyperdash_cohorts: parseHyperdashCohorts(hyperdash.markdown),
     hyperdash_screenshot_url: hyperdash.screenshot || null,
   };

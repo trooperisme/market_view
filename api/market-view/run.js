@@ -51,7 +51,11 @@ export default async function handler(req, res) {
       embedImages: true,
     });
 
-    return res.status(200).json(result);
+    return res.status(200).json({
+      model: result.model,
+      snapshotId: result.snapshotId,
+      report: result.report,
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
