@@ -8,6 +8,7 @@ const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL || "https://api.firecraw
 const FRESH_MAX_AGE_MS = 0;
 
 const urls = {
+  hansolarLightlens: "https://lightlens.vercel.app/traders/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db",
   hansolarHypurrscan: "https://hypurrscan.io/address/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db#perps",
   hansolarLighter: "https://app.lighter.xyz/public-pools/281474976694250",
   nypLighter: "https://app.lighter.xyz/public-pools/281474976624925",
@@ -88,6 +89,27 @@ function sideFromText(value) {
   if (normalized.includes("short")) return "short";
   if (normalized.includes("long")) return "long";
   return "unknown";
+}
+
+function parseLightLensTrader(markdown) {
+  const table = extractTables(markdown).find((candidate) => candidate.header.includes("Symbol") && candidate.header.includes("Position Value"));
+  if (!table) return [];
+  return table.rows.map((row) => {
+    const symbol = row[0];
+    return {
+      symbol,
+      side: sideFromText(row[2]),
+      leverage: "",
+      size: row[1] || "",
+      position_value_usd: valueToNumber(row[4]),
+      entry: normalizeMoneyText(row[3]),
+      mark: "",
+      unrealized_pnl: normalizeMoneyText(row[5]),
+      funding: "",
+      liquidation: "",
+      category: categoryFor(symbol),
+    };
+  }).filter((position) => position.symbol && position.side !== "unknown");
 }
 
 async function runLimited(tasks, limit = 5) {
@@ -323,6 +345,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
   await mkdir(cacheDir, { recursive: true });
 
   const [
+    hansolarLightlens,
     hansolarHypurrscan,
     hansolarLighter,
     nypLighter,
@@ -337,6 +360,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     coinsense,
     hyperdash,
   ] = await runLimited([
+    () => scrapeMarkdown(urls.hansolarLightlens, { outputDir: cacheDir, name: "hansolar-lightlens" }),
     () => scrapeMarkdown(urls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
     () => scrapeMarkdown(urls.hansolarLighter, { outputDir: cacheDir, name: "hansolar-lighter", formats: ["markdown", "html", "screenshot"] }),
     () => scrapeMarkdown(urls.nypLighter, { outputDir: cacheDir, name: "nyp-lighter", formats: ["markdown", "html", "screenshot"] }),
@@ -352,6 +376,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     () => scrapeMarkdown(urls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
 
+  const hansolarLightlensPositions = parseLightLensTrader(hansolarLightlens.markdown);
   const hansolarHypurrscanPositions = parseHypurrscanTrader(hansolarHypurrscan.markdown);
   const hansolarLighterPositions = parseLighterPool(hansolarLighter.markdown, hansolarLighter.html);
   const nypPositions = parseLighterPool(nypLighter.markdown, nypLighter.html);
@@ -368,9 +393,10 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
       {
         name: "Hansolar",
         display_name: "Hansolar ⭐",
-        source: "Hypurrscan + Lighter",
-        account_stats: `Live scrape maxAge=0 | Hypurrscan ${hansolarHypurrscanPositions.length} rows | Lighter ${hansolarLighterPositions.length} rows`,
+        source: "LightLens + Hypurrscan + Lighter",
+        account_stats: `Live scrape maxAge=0 | LightLens ${hansolarLightlensPositions.length} rows | Hypurrscan ${hansolarHypurrscanPositions.length} rows | Lighter ${hansolarLighterPositions.length} rows`,
         positions: [
+          ...withPositionSource(hansolarLightlensPositions, "LightLens"),
           ...withPositionSource(hansolarHypurrscanPositions, "Hypurrscan"),
           ...withPositionSource(hansolarLighterPositions, "Lighter"),
         ],
