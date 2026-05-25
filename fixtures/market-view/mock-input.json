@@ -327,11 +327,51 @@
       ]
     },
     {
-      "name": "SmallCapScientist",
-      "display_name": "SmallCapScientist",
+      "name": "CryptoCondom",
+      "display_name": "CryptoCondom",
       "source": "Hypurrscan",
-      "account_stats": "Live scrape maxAge=0",
-      "positions": []
+      "account_stats": "Account Value $79,183.20 | Margin Used $56,598.25 | 3 active positions",
+      "positions": [
+        {
+          "symbol": "ETH",
+          "side": "short",
+          "leverage": "25X (cross)",
+          "position_value_usd": 569694.58,
+          "size": "-269.2064",
+          "entry": "$2,098.52",
+          "mark": "$2,116.25",
+          "unrealized_pnl": "-$4,758.85",
+          "funding": "$19.78",
+          "liquidation": "$2,301.51",
+          "category": "crypto"
+        },
+        {
+          "symbol": "ARB",
+          "side": "long",
+          "leverage": "10X (cross)",
+          "position_value_usd": 127769.86,
+          "size": "1186570.0",
+          "entry": "$0.10607",
+          "mark": "$0.10770",
+          "unrealized_pnl": "$1,898.55",
+          "funding": "$19.59",
+          "liquidation": "$0.06254",
+          "category": "crypto"
+        },
+        {
+          "symbol": "HYPE",
+          "side": "long",
+          "leverage": "10X (cross)",
+          "position_value_usd": 210334.83,
+          "size": "3305.8",
+          "entry": "$62.6196",
+          "mark": "$63.6235",
+          "unrealized_pnl": "$3,326.78",
+          "funding": "$19.69",
+          "liquidation": "$47.42",
+          "category": "crypto"
+        }
+      ]
     },
     {
       "name": "DegenDuck",
