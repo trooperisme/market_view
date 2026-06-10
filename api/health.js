@@ -1,7 +1,11 @@
+import { requireApiAuth } from "../lib/auth.js";
+
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free";
 
 export default function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (!requireApiAuth(req, res)) return;
+
   res.status(200).json({
     ok: true,
     model: DEFAULT_MODEL,

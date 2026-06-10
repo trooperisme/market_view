@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { generateMarketViewReport } from "../../scripts/generate-market-view-report-openrouter.js";
+import { requireApiAuth } from "../../lib/auth.js";
 
 const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free";
 
@@ -31,6 +32,8 @@ function timestamp() {
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+  if (!requireApiAuth(req, res)) return;
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });

@@ -29,6 +29,8 @@ Set:
 FIRECRAWL_API_KEY=your_key_here
 OPENROUTER_API_KEY=your_key_here
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
+MARKET_VIEW_USER=admin
+MARKET_VIEW_PASSWORD=your_password_here
 ```
 
 ## Run
@@ -83,6 +85,8 @@ Required Vercel environment variables:
 FIRECRAWL_API_KEY=your_key_here
 OPENROUTER_API_KEY=your_key_here
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
+MARKET_VIEW_USER=admin
+MARKET_VIEW_PASSWORD=your_password_here
 ```
 
 Generated Vercel reports embed the cropped CoinSense chart image directly in the markdown response because Vercel serverless storage is stateless. The browser UI also keeps recent snapshots in localStorage for quick review.

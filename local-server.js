@@ -5,6 +5,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import { basename, extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { isAuthConfigured, isAuthorizedHeader } from "./lib/auth.js";
 
 await loadEnvFile(resolve(".env"));
 
@@ -51,6 +52,23 @@ function sendJson(res, status, data) {
     "Content-Length": Buffer.byteLength(body),
   });
   res.end(body);
+}
+
+function requireLocalAuth(req, res) {
+  if (!isAuthConfigured()) {
+    sendJson(res, 503, { error: "Market View auth is not configured. Set MARKET_VIEW_USER and MARKET_VIEW_PASSWORD in .env." });
+    return false;
+  }
+
+  if (isAuthorizedHeader(req.headers.authorization)) return true;
+
+  res.writeHead(401, {
+    "Cache-Control": "no-store",
+    "Content-Type": "text/plain; charset=utf-8",
+    "WWW-Authenticate": 'Basic realm="Market View", charset="UTF-8"',
+  });
+  res.end("Authentication required.");
+  return false;
 }
 
 function readJsonBody(req) {
@@ -226,6 +244,8 @@ async function serveStatic(req, res) {
 
 const server = createServer(async (req, res) => {
   try {
+    if (!requireLocalAuth(req, res)) return;
+
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (req.method === "GET" && req.url === "/api/health") {
       sendJson(res, 200, {
