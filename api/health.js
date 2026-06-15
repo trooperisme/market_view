@@ -1,6 +1,5 @@
 import { requireApiAuth } from "../lib/auth.js";
-
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "nvidia/nemotron-3-super-120b-a12b:free";
+import { DEFAULT_MODEL } from "../src/config.js";
 
 export default function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");

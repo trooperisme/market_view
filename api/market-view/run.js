@@ -1,30 +1,8 @@
 import { join } from "node:path";
-import { generateMarketViewReport } from "../../scripts/generate-market-view-report-openrouter.js";
+import { generateMarketViewReport } from "../../src/market-view/workflow.js";
 import { requireApiAuth } from "../../lib/auth.js";
-
-const DEFAULT_MODEL = process.env.OPENROUTER_MODEL || "nvidia/nemotron-3-super-120b-a12b:free";
-
-async function readJsonBody(req) {
-  if (req.body && typeof req.body === "object") return req.body;
-  if (typeof req.body === "string") return JSON.parse(req.body || "{}");
-
-  return await new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-      if (body.length > 1_000_000) reject(new Error("Request body too large."));
-    });
-    req.on("end", () => {
-      if (!body) return resolve({});
-      try {
-        resolve(JSON.parse(body));
-      } catch {
-        reject(new Error("Invalid JSON body."));
-      }
-    });
-    req.on("error", reject);
-  });
-}
+import { DEFAULT_MODEL } from "../../src/config.js";
+import { readVercelJsonBody } from "../../src/http.js";
 
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -44,7 +22,7 @@ export default async function handler(req, res) {
       throw new Error("OPENROUTER_API_KEY is missing in Vercel environment variables.");
     }
 
-    const body = await readJsonBody(req);
+    const body = await readVercelJsonBody(req);
     const outputDir = join("/tmp", "market-view", `web-${timestamp()}`);
     const result = await generateMarketViewReport({
       live: true,

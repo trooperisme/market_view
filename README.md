@@ -13,7 +13,12 @@ Firecrawl source capture
 -> markdown report
 ```
 
-This repository currently contains the report-generation test path with mock normalized input. The next production step is replacing `fixtures/market-view/mock-input.json` with live Firecrawl collector output.
+The implementation keeps adapters thin:
+
+- `src/market-view/` contains collection, parsing, computation, LLM, assets, report rendering, snapshots, and workflow orchestration.
+- `scripts/` contains CLI entrypoints only.
+- `api/` contains Vercel handlers.
+- `local-server.js` contains local HTTP routing only.
 
 ## Setup
 

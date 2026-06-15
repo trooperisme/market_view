@@ -8,6 +8,8 @@ const snapshotsEl = document.querySelector("#snapshots");
 let currentMarkdown = "";
 let currentSnapshotId = null;
 const BROWSER_SNAPSHOT_PREFIX = "market-view:snapshot:";
+const MAX_BROWSER_SNAPSHOTS = 8;
+const MAX_BROWSER_SNAPSHOT_BYTES = 2_000_000;
 
 function setStatus(message) {
   statusLine.textContent = message;
@@ -40,7 +42,7 @@ function browserSnapshotKey(id) {
   return `${BROWSER_SNAPSHOT_PREFIX}${id}`;
 }
 
-function readBrowserSnapshots() {
+function collectBrowserSnapshots() {
   const snapshots = [];
   for (let i = 0; i < localStorage.length; i += 1) {
     const key = localStorage.key(i);
@@ -54,8 +56,21 @@ function readBrowserSnapshots() {
 
   return snapshots
     .filter((snapshot) => snapshot?.id && snapshot?.report)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 20);
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function readBrowserSnapshots() {
+  return collectBrowserSnapshots().slice(0, 20);
+}
+
+function pruneBrowserSnapshots(keep = MAX_BROWSER_SNAPSHOTS) {
+  for (const snapshot of collectBrowserSnapshots().slice(keep)) {
+    localStorage.removeItem(browserSnapshotKey(snapshot.id));
+  }
+}
+
+function isStorageQuotaError(error) {
+  return error?.name === "QuotaExceededError" || error?.code === 22 || error?.code === 1014;
 }
 
 function saveBrowserSnapshot(payload) {
@@ -70,9 +85,28 @@ function saveBrowserSnapshot(payload) {
     subtitle: reportDate,
     report: payload.report,
   };
+  const serialized = JSON.stringify(snapshot);
 
-  localStorage.setItem(browserSnapshotKey(id), JSON.stringify(snapshot));
-  return snapshot;
+  pruneBrowserSnapshots(MAX_BROWSER_SNAPSHOTS - 1);
+
+  if (new Blob([serialized]).size > MAX_BROWSER_SNAPSHOT_BYTES) {
+    return { saved: false, reason: "too_large" };
+  }
+
+  try {
+    localStorage.setItem(browserSnapshotKey(id), serialized);
+    return { saved: true, snapshot };
+  } catch (error) {
+    if (!isStorageQuotaError(error)) throw error;
+    pruneBrowserSnapshots(0);
+    try {
+      localStorage.setItem(browserSnapshotKey(id), serialized);
+      return { saved: true, snapshot };
+    } catch (retryError) {
+      if (!isStorageQuotaError(retryError)) throw retryError;
+      return { saved: false, reason: "quota" };
+    }
+  }
 }
 
 function renderMarkdown(markdown) {
@@ -171,8 +205,9 @@ async function runWorkflow() {
     currentMarkdown = payload.report;
     currentSnapshotId = payload.snapshotId;
     reportEl.innerHTML = renderMarkdown(currentMarkdown);
-    saveBrowserSnapshot(payload);
-    setStatus(`Done. Generated with ${payload.model}.`);
+    const browserSnapshot = saveBrowserSnapshot(payload);
+    if (browserSnapshot.saved) setStatus(`Done. Generated with ${payload.model}.`);
+    else setStatus(`Done. Generated with ${payload.model}. Browser snapshot not saved (${browserSnapshot.reason}).`);
     await loadSnapshots();
   } catch (error) {
     currentMarkdown = "";
