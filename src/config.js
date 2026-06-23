@@ -20,7 +20,7 @@ export const sourceUrls = {
   onchainSorcerer: "https://hypurrscan.io/address/0xba4387ac1a36f648d1044b2f79023d1f42aa8ee3#perps",
   coinbender: "https://hypurrscan.io/address/0x4829f3bbd5508707339547ebefface2b4c86d3b5#perps",
   cryptoCondom: "https://hypurrscan.io/address/0x48ec0004494081e8332589faf0747d568da79faf#perps",
-  bigTrout300: "https://hypurrscan.io/address/0xa182fad4a415754b5ab97ed92dd64594ec2bfb92#perps",
+  bigTrout300: "https://hypurrscan.io/address/0x7d6e1a5c35c7BF01b22Aca2Ed893B9d4132128D3#perps",
   degenDuck: "https://hypurrscan.io/address/0x2bf39a1004ff433938a5f933a44b8dad377937f6#perps",
   tommy: "https://hypurrscan.io/address/0x83b1385d8126ecf64bfb3b4254d67eb9db753bcc#perps",
   bmwball56: "https://hypurrscan.io/address/0xaf6f7a06f7bfb3bdf7bcd2c751564f4990d1efc7#perps",
