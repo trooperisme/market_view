@@ -93,6 +93,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     kPoolLighter,
     giver,
     onchainSorcerer,
+    onchainSorcererAlt,
     coinbender,
     cryptoCondom,
     bigTrout300,
@@ -109,6 +110,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     () => scrapeMarkdown(sourceUrls.kPoolLighter, { outputDir: cacheDir, name: "k-pool-lighter", formats: ["markdown", "html", "screenshot"] }),
     () => scrapeMarkdown(sourceUrls.giver, { outputDir: cacheDir, name: "giver" }),
     () => scrapeMarkdown(sourceUrls.onchainSorcerer, { outputDir: cacheDir, name: "onchain-sorcerer" }),
+    () => scrapeMarkdown(sourceUrls.onchainSorcererAlt, { outputDir: cacheDir, name: "onchain-sorcerer-alt" }),
     () => scrapeMarkdown(sourceUrls.coinbender, { outputDir: cacheDir, name: "coinbender" }),
     () => scrapeMarkdown(sourceUrls.cryptoCondom, { outputDir: cacheDir, name: "cryptocondom" }),
     () => scrapeMarkdown(sourceUrls.bigTrout300, { outputDir: cacheDir, name: "bigtrout300" }),
@@ -124,6 +126,10 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
   const hansolarLighterPositions = parseLighterPool(hansolarLighter.markdown, hansolarLighter.html);
   const nypPositions = parseLighterPool(nypLighter.markdown, nypLighter.html);
   const kPoolPositions = parseLighterPool(kPoolLighter.markdown, kPoolLighter.html);
+  const onchainSorcererPositions = [
+    ...withPositionSource(parseHypurrscanTrader(onchainSorcerer.markdown), "Hypurrscan 0xba4387"),
+    ...withPositionSource(parseHypurrscanTrader(onchainSorcererAlt.markdown), "Hypurrscan 0x1a02b0"),
+  ];
 
   const input = {
     run_label: "Market View Live Scrape",
@@ -154,10 +160,10 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
       {
         name: "OnchainSorcerer",
         display_name: "OnchainSorcerer 🪄",
-        source: "Hypurrscan",
-        account_stats: "Live scrape maxAge=0",
-        status: parseHypurrscanTrader(onchainSorcerer.markdown).length ? undefined : "no_active_positions",
-        positions: parseHypurrscanTrader(onchainSorcerer.markdown),
+        source: "Hypurrscan x2",
+        account_stats: "Live scrape maxAge=0 | Wallets 0xba4387ac1a36f648d1044b2f79023d1f42aa8ee3 + 0x1a02b0e7d51cccdeb4b9ebedbca5607872dac5fe",
+        status: onchainSorcererPositions.length ? undefined : "no_active_positions",
+        positions: onchainSorcererPositions,
       },
       {
         name: "coinbender_lfg",

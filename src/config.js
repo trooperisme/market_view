@@ -18,6 +18,7 @@ export const sourceUrls = {
   kPoolLighter: "https://app.lighter.xyz/public-pools/281474976680237",
   giver: "https://legacy.hyperdash.com/trader/0x8fc7c0442e582bca195978c5a4fdec2e7c5bb0f7",
   onchainSorcerer: "https://hypurrscan.io/address/0xba4387ac1a36f648d1044b2f79023d1f42aa8ee3#perps",
+  onchainSorcererAlt: "https://hypurrscan.io/address/0x1a02b0e7d51cccdeb4b9ebedbca5607872dac5fe#perps",
   coinbender: "https://hypurrscan.io/address/0x4829f3bbd5508707339547ebefface2b4c86d3b5#perps",
   cryptoCondom: "https://hypurrscan.io/address/0x48ec0004494081e8332589faf0747d568da79faf#perps",
   bigTrout300: "https://hypurrscan.io/address/0x7d6e1a5c35c7BF01b22Aca2Ed893B9d4132128D3#perps",
