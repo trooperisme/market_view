@@ -366,6 +366,60 @@ select {
   color: var(--green);
 }
 
+.position-table th {
+  white-space: nowrap;
+}
+
+.table-sort-button {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0;
+}
+
+.table-sort-button:hover,
+.table-sort-button:focus-visible {
+  color: #c4ff91;
+  outline: none;
+}
+
+.sort-caret {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  color: var(--cyan);
+  font-size: 13px;
+}
+
+.delta-cell {
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.delta-up {
+  color: #00e676;
+}
+
+.delta-down {
+  color: #ff4d5a;
+}
+
+.delta-new {
+  color: var(--amber);
+}
+
+.delta-flat {
+  color: var(--muted);
+}
+
 .report-output code {
   color: var(--cyan);
 }

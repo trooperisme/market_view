@@ -36,6 +36,7 @@ export default async function handler(req, res) {
       model: result.model,
       snapshotId: result.snapshotId,
       report: result.report,
+      normalized: result.normalized,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

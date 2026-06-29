@@ -5,6 +5,13 @@ import { computeHyperdashComparison, computeTrader } from "../src/market-view/co
 import { categoryFor, normalizeMoneyText, parseHypurrscanTrader, sideFromText } from "../src/market-view/parsers.js";
 import { renderReport } from "../src/market-view/report.js";
 import { generateMarketViewReport } from "../src/market-view/workflow.js";
+import {
+  buildPositionSizeIndex,
+  deltaLabel,
+  findLatestPriorSnapshot,
+  numericPositionSize,
+  sortTableRowsByPositionValue,
+} from "../public/position-tools.js";
 
 test("normalizes side, category, and money values", () => {
   assert.equal(sideFromText("Long 10x"), "long");
@@ -66,6 +73,67 @@ test("renders report sections and model name", () => {
   assert.match(report, /CoinSense Vault Monitor/);
   assert.match(report, /Hyperdash Cohort Sentiment/);
   assert.match(report, /nvidia\/nemotron-3-super-120b-a12b:free/);
+});
+
+test("parses position sizes and formats delta labels", () => {
+  assert.equal(numericPositionSize("100"), 100);
+  assert.equal(numericPositionSize("-3.0000"), -3);
+  assert.equal(numericPositionSize("7,000.00"), 7000);
+  assert.equal(numericPositionSize("1.76 BTC"), 1.76);
+  assert.equal(numericPositionSize("-97.49K ASTER"), -97490);
+
+  assert.equal(deltaLabel("110", 100), "+10.0%");
+  assert.equal(deltaLabel("90", 100), "-10.0%");
+  assert.equal(deltaLabel("100", 100), "0.0%");
+  assert.equal(deltaLabel("1", undefined), "New");
+  assert.equal(deltaLabel("1", 0), "New");
+  assert.equal(deltaLabel("", 100), "-");
+});
+
+test("indexes prior positions by trader source symbol and side", () => {
+  const prior = buildPositionSizeIndex({
+    traders: [{
+      display_name: "Trader A",
+      source: "Fallback",
+      positions: [
+        { symbol: "BTC", side: "long", source: "Hypurrscan", size: "2" },
+        { symbol: "BTC", side: "short", source: "Hypurrscan", size: "-3" },
+      ],
+    }],
+  });
+
+  assert.equal(prior.get("Trader A||Hypurrscan||BTC||long"), 2);
+  assert.equal(prior.get("Trader A||Hypurrscan||BTC||short"), 3);
+  assert.equal(prior.get("Trader A||Fallback||BTC||long"), undefined);
+});
+
+test("finds latest prior normalized snapshot and sorts table rows by position value", () => {
+  const snapshots = [
+    { id: "older", createdAt: "2026-06-29T01:00:00.000Z", normalized: { traders: [] } },
+    { id: "current", createdAt: "2026-06-29T03:00:00.000Z", normalized: { traders: [] } },
+    { id: "latest-prior", createdAt: "2026-06-29T02:00:00.000Z", normalized: { traders: [] } },
+    { id: "no-normalized", createdAt: "2026-06-29T02:30:00.000Z" },
+  ];
+
+  assert.equal(findLatestPriorSnapshot(snapshots, snapshots[1]).id, "latest-prior");
+
+  const rows = [
+    { dataset: { positionValue: "300" } },
+    { dataset: { positionValue: "100" } },
+    { dataset: { positionValue: "200" } },
+  ];
+  const appended = [];
+  const tbody = {
+    querySelectorAll: () => rows,
+    appendChild: (row) => appended.push(row.dataset.positionValue),
+  };
+
+  sortTableRowsByPositionValue(tbody, "asc");
+  assert.deepEqual(appended, ["100", "200", "300"]);
+
+  appended.length = 0;
+  sortTableRowsByPositionValue(tbody, "desc");
+  assert.deepEqual(appended, ["300", "200", "100"]);
 });
 
 test("workflow smoke uses fallback analysis without OpenRouter key", async () => {

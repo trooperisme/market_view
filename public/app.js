@@ -1,3 +1,12 @@
+import {
+  buildPositionSizeIndex,
+  deltaClass,
+  deltaLabel,
+  findLatestPriorSnapshot,
+  numericPositionValue,
+  sortTableRowsByPositionValue,
+} from "./position-tools.js";
+
 const runButton = document.querySelector("#run");
 const copyButton = document.querySelector("#copy");
 const statusLine = document.querySelector("#status");
@@ -7,6 +16,7 @@ const snapshotsEl = document.querySelector("#snapshots");
 
 let currentMarkdown = "";
 let currentSnapshotId = null;
+let currentNormalized = null;
 const BROWSER_SNAPSHOT_PREFIX = "market-view:snapshot:";
 const MAX_BROWSER_SNAPSHOTS = 8;
 const MAX_BROWSER_SNAPSHOT_BYTES = 2_000_000;
@@ -84,6 +94,7 @@ function saveBrowserSnapshot(payload) {
     title: "Market View Snapshot",
     subtitle: reportDate,
     report: payload.report,
+    normalized: payload.normalized || null,
   };
   const serialized = JSON.stringify(snapshot);
 
@@ -187,6 +198,74 @@ function renderMarkdown(markdown) {
   return html.join("");
 }
 
+function renderReportView(markdown, normalized, comparisonSnapshot = null) {
+  reportEl.innerHTML = renderMarkdown(markdown);
+  enhanceTraderPositionTables(normalized, comparisonSnapshot?.normalized || null);
+}
+
+function enhanceTraderPositionTables(normalized, comparisonNormalized) {
+  const traders = normalized?.traders || [];
+  if (!traders.length) return;
+
+  const previousSizes = comparisonNormalized ? buildPositionSizeIndex(comparisonNormalized) : null;
+  const tables = Array.from(reportEl.querySelectorAll("table"));
+  let tableIndex = 0;
+
+  for (const trader of traders) {
+    const positions = trader.positions || [];
+    if (!positions.length) continue;
+
+    const table = tables[tableIndex];
+    tableIndex += 1;
+    if (!table) continue;
+
+    const headerCells = Array.from(table.querySelectorAll("thead th"));
+    const positionValueIndex = headerCells.findIndex((cell) => cell.textContent.trim() === "Position Value");
+    if (positionValueIndex === -1) continue;
+
+    table.classList.add("position-table");
+    const deltaHeader = document.createElement("th");
+    deltaHeader.textContent = "Delta %";
+    headerCells[headerCells.length - 1].after(deltaHeader);
+
+    const sortButton = document.createElement("button");
+    sortButton.type = "button";
+    sortButton.className = "table-sort-button";
+    sortButton.dataset.sortDirection = "none";
+    sortButton.innerHTML = "<span>Position Value</span><span class=\"sort-caret\" aria-hidden=\"true\">↕</span>";
+    sortButton.setAttribute("aria-label", "Sort positions by position value");
+    headerCells[positionValueIndex].textContent = "";
+    headerCells[positionValueIndex].appendChild(sortButton);
+
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    rows.forEach((row, rowIndex) => {
+      const position = positions[rowIndex];
+      const cells = Array.from(row.children);
+      const positionValue = numericPositionValue(position?.position_value_usd);
+      row.dataset.positionValue = String(positionValue);
+
+      const deltaCell = document.createElement("td");
+      const priorSize = previousSizes?.get([
+        trader.display_name || trader.name || "",
+        position?.source || trader.source || "",
+        position?.symbol || "",
+        String(position?.side || "").toLowerCase(),
+      ].join("||"));
+      const label = previousSizes ? deltaLabel(position?.size, priorSize) : "-";
+      deltaCell.textContent = label;
+      deltaCell.className = `delta-cell ${deltaClass(label)}`;
+      cells[cells.length - 1].after(deltaCell);
+    });
+
+    sortButton.addEventListener("click", () => {
+      const nextDirection = sortButton.dataset.sortDirection === "asc" ? "desc" : "asc";
+      sortButton.dataset.sortDirection = nextDirection;
+      sortButton.querySelector(".sort-caret").textContent = nextDirection === "asc" ? "↑" : "↓";
+      sortTableRowsByPositionValue(table.querySelector("tbody"), nextDirection);
+    });
+  }
+}
+
 async function runWorkflow() {
   runButton.disabled = true;
   copyButton.disabled = true;
@@ -204,7 +283,9 @@ async function runWorkflow() {
 
     currentMarkdown = payload.report;
     currentSnapshotId = payload.snapshotId;
-    reportEl.innerHTML = renderMarkdown(currentMarkdown);
+    currentNormalized = payload.normalized || null;
+    const comparisonSnapshot = collectBrowserSnapshots().find((snapshot) => snapshot.normalized) || null;
+    renderReportView(currentMarkdown, currentNormalized, comparisonSnapshot);
     const browserSnapshot = saveBrowserSnapshot(payload);
     if (browserSnapshot.saved) setStatus(`Done. Generated with ${payload.model}.`);
     else setStatus(`Done. Generated with ${payload.model}. Browser snapshot not saved (${browserSnapshot.reason}).`);
@@ -212,6 +293,7 @@ async function runWorkflow() {
   } catch (error) {
     currentMarkdown = "";
     currentSnapshotId = null;
+    currentNormalized = null;
     reportEl.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
     setStatus("Workflow failed.");
   } finally {
@@ -263,7 +345,8 @@ async function loadSnapshot(id) {
       if (!snapshot) throw new Error("Browser snapshot not found.");
       currentMarkdown = snapshot.report;
       currentSnapshotId = snapshot.serverSnapshotId;
-      reportEl.innerHTML = renderMarkdown(currentMarkdown);
+      currentNormalized = snapshot.normalized || null;
+      renderReportView(currentMarkdown, currentNormalized, findLatestPriorSnapshot(collectBrowserSnapshots(), snapshot));
       setStatus(`Loaded browser snapshot ${id}.`);
       return;
     }
@@ -273,7 +356,8 @@ async function loadSnapshot(id) {
     if (!response.ok) throw new Error(payload.error || "Could not load snapshot.");
     currentMarkdown = payload.report;
     currentSnapshotId = payload.id;
-    reportEl.innerHTML = renderMarkdown(currentMarkdown);
+    currentNormalized = payload.normalized || null;
+    renderReportView(currentMarkdown, currentNormalized);
     setStatus(`Loaded snapshot ${id}.`);
   } catch (error) {
     setStatus(error.message);
