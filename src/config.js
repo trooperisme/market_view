@@ -24,6 +24,7 @@ export const sourceUrls = {
   bigTrout300: "https://hypurrscan.io/address/0x7d6e1a5c35c7BF01b22Aca2Ed893B9d4132128D3#perps",
   degenDuck: "https://hypurrscan.io/address/0x2bf39a1004ff433938a5f933a44b8dad377937f6#perps",
   tommy: "https://hypurrscan.io/address/0x83b1385d8126ecf64bfb3b4254d67eb9db753bcc#perps",
+  tommyAlt: "https://hypurrscan.io/address/0x57B8cFc502f14CC9eF77668D2208f001e1cCB4fC#perps",
   bmwball56: "https://hypurrscan.io/address/0xaf6f7a06f7bfb3bdf7bcd2c751564f4990d1efc7#perps",
   coinsense: COINSENSE_VAULT_URL,
   hyperdash: "https://hyperdash.com/explore",

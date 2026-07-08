@@ -99,6 +99,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     bigTrout300,
     degenDuck,
     tommy,
+    tommyAlt,
     bmwball56,
     coinsense,
     hyperdash,
@@ -116,6 +117,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     () => scrapeMarkdown(sourceUrls.bigTrout300, { outputDir: cacheDir, name: "bigtrout300" }),
     () => scrapeMarkdown(sourceUrls.degenDuck, { outputDir: cacheDir, name: "degenduck" }),
     () => scrapeMarkdown(sourceUrls.tommy, { outputDir: cacheDir, name: "tommy" }),
+    () => scrapeMarkdown(sourceUrls.tommyAlt, { outputDir: cacheDir, name: "tommy-alt" }),
     () => scrapeMarkdown(sourceUrls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
     () => scrapeMarkdown(sourceUrls.coinsense, { outputDir: cacheDir, name: "coinsense", formats: ["markdown", "screenshot"] }),
     () => scrapeMarkdown(sourceUrls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
@@ -129,6 +131,10 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
   const onchainSorcererPositions = [
     ...withPositionSource(parseHypurrscanTrader(onchainSorcerer.markdown), "Hypurrscan 0xba4387"),
     ...withPositionSource(parseHypurrscanTrader(onchainSorcererAlt.markdown), "Hypurrscan 0x1a02b0"),
+  ];
+  const tommyPositions = [
+    ...withPositionSource(parseHypurrscanTrader(tommy.markdown), "Hypurrscan 0x83b138"),
+    ...withPositionSource(parseHypurrscanTrader(tommyAlt.markdown), "Hypurrscan 0x57B8cF"),
   ];
 
   const input = {
@@ -198,10 +204,10 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
       {
         name: "tommy",
         display_name: "tommy",
-        source: "Hypurrscan",
-        account_stats: "Live scrape maxAge=0",
-        status: parseHypurrscanTrader(tommy.markdown).length ? undefined : "no_active_positions",
-        positions: parseHypurrscanTrader(tommy.markdown),
+        source: "Hypurrscan x2",
+        account_stats: "Live scrape maxAge=0 | Wallets 0x83b1385d8126ecf64bfb3b4254d67eb9db753bcc + 0x57B8cFc502f14CC9eF77668D2208f001e1cCB4fC",
+        status: tommyPositions.length ? undefined : "no_active_positions",
+        positions: tommyPositions,
       },
       {
         name: "bmwball56",
