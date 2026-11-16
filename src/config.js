@@ -26,6 +26,7 @@ export const sourceUrls = {
   tommyAlt: "https://hypurrscan.io/address/0x57B8cFc502f14CC9eF77668D2208f001e1cCB4fC#perps",
   bmwball56: "https://hypurrscan.io/address/0xaf6f7a06f7bfb3bdf7bcd2c751564f4990d1efc7#perps",
   convexityBtc: "https://hypurrscan.io/address/0x5661a070eb13c7c55ac3210b2447d4bea426cbf5#perps",
+  ansemHypurrscan: "https://hypurrscan.io/address/0xb2b7e6563c2eba9113979aa04ad1b77313701a8c#perps",
   hyperdash: "https://hyperdash.com/explore",
 };
 

@@ -101,6 +101,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     tommyAlt,
     bmwball56,
     convexityBtc,
+    ansemHypurrscan,
     hyperdash,
   ] = await runLimited([
     () => scrapeMarkdown(sourceUrls.hansolarLightlens, { outputDir: cacheDir, name: "hansolar-lightlens" }),
@@ -119,6 +120,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     () => scrapeMarkdown(sourceUrls.tommyAlt, { outputDir: cacheDir, name: "tommy-alt" }),
     () => scrapeMarkdown(sourceUrls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
     () => scrapeMarkdown(sourceUrls.convexityBtc, { outputDir: cacheDir, name: "convexity-btc" }),
+    () => scrapeMarkdown(sourceUrls.ansemHypurrscan, { outputDir: cacheDir, name: "ansem-hypurrscan" }),
     () => scrapeMarkdown(sourceUrls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
 
@@ -136,6 +138,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     ...withPositionSource(parseHypurrscanTrader(tommyAlt.markdown), "Hypurrscan 0x57B8cF"),
   ];
   const convexityBtcPositions = parseHypurrscanTrader(convexityBtc.markdown);
+  const ansemPositions = parseHypurrscanTrader(ansemHypurrscan.markdown);
 
   const input = {
     run_label: "Market View Live Scrape",
@@ -224,6 +227,14 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
         account_stats: `Live scrape maxAge=0 | Wallet 0x5661a070eb13c7c55ac3210b2447d4bea426cbf5 | ${convexityBtcPositions.length} active position${convexityBtcPositions.length === 1 ? "" : "s"}`,
         status: convexityBtcPositions.length ? undefined : "no_active_positions",
         positions: withPositionSource(convexityBtcPositions, "Hypurrscan 0x5661a0"),
+      },
+      {
+        name: "Ansem",
+        display_name: "Ansem",
+        source: "Hypurrscan",
+        account_stats: `Live scrape maxAge=0 | Wallet 0xb2b7e6563c2eba9113979aa04ad1b77313701a8c | ${ansemPositions.length} active position${ansemPositions.length === 1 ? "" : "s"}`,
+        status: ansemPositions.length ? undefined : "no_active_positions",
+        positions: withPositionSource(ansemPositions, "Hypurrscan 0xb2b7e6"),
       },
       {
         name: "NYP",
