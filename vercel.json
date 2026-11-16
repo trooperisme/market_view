@@ -27,6 +27,10 @@
       "dest": "/api/health.js"
     },
     {
+      "src": "/api/market-trends",
+      "dest": "/api/market-trends.js"
+    },
+    {
       "src": "/api/market-view/run",
       "dest": "/api/market-view/run.js"
     },

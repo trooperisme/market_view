@@ -90,3 +90,7 @@ MARKET_VIEW_PASSWORD=your_password_here
 ```
 
 Generated Vercel reports embed the cropped CoinSense chart image directly in the markdown response because Vercel serverless storage is stateless. The browser UI also keeps recent snapshots in localStorage for quick review.
+
+## CoinRotator market trends
+
+The dashboard reads CoinRotator Market Health and BTC analysis through `/api/market-trends`. The endpoint extracts daily UP/DOWN/HODL breadth history and BTC/USD daily and weekly direction with streak lengths. It rejects incomplete or older than 36-hour source readings and caches a successful result in memory for one hour. No separate API key or CEX SMW endpoint is required.

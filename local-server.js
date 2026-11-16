@@ -6,6 +6,7 @@ import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import { basename, extname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { isAuthConfigured, isAuthorizedHeader } from "./lib/auth.js";
+import { getMarketTrends } from "./src/market-trends.js";
 
 await loadEnvFile(resolve(".env"));
 
@@ -253,6 +254,15 @@ const server = createServer(async (req, res) => {
         model: DEFAULT_MODEL,
         hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY),
       });
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/market-trends") {
+      try {
+        sendJson(res, 200, await getMarketTrends());
+      } catch (error) {
+        sendJson(res, 503, { error: error.message || "Market trends unavailable" });
+      }
       return;
     }
 
