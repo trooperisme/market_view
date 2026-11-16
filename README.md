@@ -103,4 +103,4 @@ The browser UI keeps recent snapshots in localStorage for quick review.
 
 ## CoinRotator market trends
 
-The Market View dashboard reads the public CoinRotator Market Health page and its BTC analysis data through `/api/market-trends`. The endpoint extracts daily UP/DOWN/HODL breadth history and BTC/USD daily and weekly direction with streak lengths. It rejects incomplete or older than 36-hour source readings and caches a successful result in memory for one hour. No separate API key or CEX SMW endpoint is required.
+The Market View dashboard reads the public CoinRotator Market Health page and its BTC analysis data through `/api/market-trends`. The endpoint extracts daily UP/DOWN/HODL breadth history and BTC/USD daily and weekly direction with streak lengths. It rejects incomplete or older than 36-hour source readings and caches a successful result in memory for one hour. Direct requests use browser headers; if CoinRotator returns 403, the endpoint tries Firecrawl. That fallback requires a valid `FIRECRAWL_API_KEY` in the `market-view` Vercel project. The dashboard does not use a CEX SMW endpoint.
