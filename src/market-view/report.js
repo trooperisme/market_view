@@ -88,32 +88,55 @@ export function renderPositionTable(trader) {
   ].join("\n");
 }
 
-function pairNumber(value, { moneyValue = false } = {}) {
+function pairNumber(value, { moneyValue = false, signed = true, maxDecimals = 8 } = {}) {
   if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) return "—";
   const number = Number(value);
-  const formatted = Math.abs(number).toLocaleString("en-US", { maximumFractionDigits: 8 });
-  if (!moneyValue) return `${number < 0 ? "-" : number > 0 ? "+" : ""}${formatted}`;
+  const formatted = Math.abs(number).toLocaleString("en-US", { maximumFractionDigits: maxDecimals, minimumFractionDigits: maxDecimals === 2 ? 2 : 0 });
+  if (!moneyValue) return `${number < 0 ? "-" : number > 0 && signed ? "+" : ""}${formatted}`;
   return `${number < 0 ? "-" : ""}$${formatted}`;
 }
 
 export function renderPairPositionTable(trader) {
   if (!trader.pair_positions?.length) return "";
+  const estimatedPnl = trader.pair_positions.some((position) => position.pnl_basis === "price_only_estimate_excludes_fees_funding");
   const rows = trader.pair_positions.map((position) => [
       position.position_group || "—",
       position.ticker || position.symbol || "—",
       String(position.side || "unknown").toUpperCase(),
       String(position.status || "unknown").toUpperCase(),
-      pairNumber(position.active_qty),
+      pairNumber(position.active_qty, { signed: !estimatedPnl }),
       pairNumber(position.entry_vwap, { moneyValue: true }),
-      pairNumber(position.displayed_size_usd, { moneyValue: true }),
+      pairNumber(position.displayed_size_usd, { moneyValue: true, maxDecimals: estimatedPnl ? 2 : 8 }),
       pairNumber(position.current_mark, { moneyValue: true }),
-      pairNumber(position.current_upnl_usd, { moneyValue: true }),
+      pairNumber(position.current_upnl_usd, { moneyValue: true, maxDecimals: estimatedPnl ? 2 : 8 }),
     ]);
   return [
-    "| Position Group | Ticker | Side | Status | Active Qty | Entry VWAP | Displayed Size USD | Current Mark | Current uPnL |",
+    `| Position Group | Ticker | Side | Status | Active Qty | ${estimatedPnl ? "Entry" : "Entry VWAP"} | ${estimatedPnl ? "Leg Notional USD" : "Displayed Size USD"} | Current Mark | ${estimatedPnl ? "Est. Price PnL" : "Current uPnL"} |`,
     "|---|---|---|---|---:|---:|---:|---:|---:|",
     ...rows.map((row) => `| ${row.join(" | ")} |`),
   ].join("\n");
+}
+
+function renderPairReads(trader) {
+  const groups = new Map();
+  for (const leg of trader.pair_positions || []) {
+    const key = leg.position_group_id || leg.position_group;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(leg);
+  }
+  return [...groups.values()].map((legs) => {
+    const open = legs.filter((leg) => leg.status === "open");
+    const sideRead = (side) => {
+      const selected = open.filter((leg) => leg.side === side);
+      if (!selected.length) return "";
+      return selected.length === 1
+        ? `${side.toUpperCase()} ${selected[0].ticker}`
+        : `${side.toUpperCase()} ${selected.length}-asset basket`;
+    };
+    const sides = [sideRead("long"), sideRead("short")].filter(Boolean).join(" / ");
+    const gross = open.reduce((sum, leg) => sum + (Number(leg.displayed_size_usd) || 0), 0);
+    return `- ${sides || "No open legs"}${gross ? ` · ${money(gross)} gross` : ""}`;
+  }).join("\n");
 }
 
 function openOrderValue(value) {
@@ -246,19 +269,27 @@ export function renderReport(input, analysis) {
     lines.push("");
     const table = renderPositionTable(trader);
     if (table) lines.push(table);
-    else if (trader.pair_positions?.length || trader.pair_positions_status) lines.push("No directional positions.");
+    else if (trader.pair_positions?.length || trader.pair_positions_status) lines.push("Relative pair trades only.");
     else lines.push(trader.status === "positions_unavailable" ? "Current positions could not be confirmed." : "No active positions.");
     lines.push("");
 
     if (trader.pair_positions?.length || trader.pair_positions_status) {
       lines.push("Pair positions");
       lines.push("");
+      if (trader.pair_positions?.length) {
+        lines.push(renderPairReads(trader));
+        lines.push("");
+      }
       const pairTable = renderPairPositionTable(trader);
       if (pairTable) lines.push(pairTable);
       else lines.push(trader.pair_positions_status === "unavailable"
         ? "Pair positions could not be confirmed."
         : "No active pair positions.");
       lines.push("");
+      if (trader.pair_positions?.some((position) => position.pnl_basis === "price_only_estimate_excludes_fees_funding")) {
+        lines.push("Leg notional uses quantity × mark. Estimated price PnL excludes fees, funding, and realized PnL; pair trades are not a market-direction signal.");
+        lines.push("");
+      }
     }
 
     if (hasOpenOrderLayer) {

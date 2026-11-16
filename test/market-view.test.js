@@ -10,6 +10,7 @@ import { generateMarketViewReport } from "../src/market-view/workflow.js";
 import { attachOpenOrders, hypurrscanOrdersUrl, scrapeMarkdown, vaultAddressFromUrl } from "../src/market-view/collectors.js";
 import { readSnapshotWithComparison } from "../src/market-view/snapshots.js";
 import { sourceUrls } from "../src/config.js";
+import { parsePearVaultPositions, pearVaultAddress } from "../src/market-view/pear-vault.js";
 import { vietnamDateKey } from "../api/market-view/daily.js";
 import {
   listMarketViewSnapshots,
@@ -602,7 +603,7 @@ test("renders the approved clean Pear leg-level table and preserves unavailable 
 
 test("keeps Pear pair legs out of directional trader exposure", () => {
   const trader = computeTrader({
-    name: "Huf",
+    name: "moritzpike vault",
     positions: [],
     pair_positions: [{ ticker: "HYPE", side: "long", displayed_size_usd: 100000 }],
   });
@@ -610,6 +611,62 @@ test("keeps Pear pair legs out of directional trader exposure", () => {
   assert.equal(trader.short_exposure, 0);
   assert.equal(trader.bias, "NEUTRAL →");
   assert.equal(trader.pair_positions.length, 1);
+});
+
+test("parses a Pear vault pair from canonical asset IDs with separate leg notionals", () => {
+  assert.equal(pearVaultAddress(sourceUrls.pearMoritzpikeVault), "0x69f2ed780a4cec49e552dbcd35a60f41368bc362");
+  const positions = parsePearVaultPositions({ positions: [{
+    positionId: "pair-1",
+    status: "OPEN",
+    legs: [
+      { asset: "0", side: "LONG", remaining: { quantity: "+0.5", entryVwap: "60000" } },
+      { asset: "110017", side: "SHORT", remaining: { quantity: "-300", entryVwap: "100" } },
+    ],
+  }] }, { instruments: [
+    { id: "0", base: "BTC", connector: "hyperliquid" },
+    { id: "110017", base: "xyz:MSTR", connector: "hyperliquid" },
+  ] }, { mark: { "0": "65000", "110017": "105" } });
+  assert.deepEqual(positions.map((position) => ({
+    group: position.position_group,
+    ticker: position.ticker,
+    side: position.side,
+    size: position.displayed_size_usd,
+    pnl: position.current_upnl_usd,
+  })), [
+    { group: "BTC / MSTR", ticker: "BTC", side: "long", size: 32500, pnl: 2500 },
+    { group: "BTC / MSTR", ticker: "MSTR", side: "short", size: 31500, pnl: -1500 },
+  ]);
+  const report = renderReport({ ...sampleComputedInput(), traders: [computeTrader({
+    name: "moritzpike vault",
+    display_name: "moritzpike vault",
+    positions: [],
+    pair_positions: positions,
+  })] }, sampleAnalysis());
+  assert.match(report, /LONG BTC \/ SHORT MSTR · \$64,000\.00 gross/);
+  assert.match(report, /Estimated price PnL excludes fees, funding, and realized PnL/);
+});
+
+test("summarizes a multi-leg Pear vault basket without repeating every asset in each row", () => {
+  const positions = parsePearVaultPositions({ positions: [{
+    positionId: "basket-1",
+    status: "OPEN",
+    legs: [
+      { asset: "1", side: "LONG", remaining: { quantity: "10", entryVwap: "10" } },
+      ...["2", "3", "4", "5"].map((asset) => ({ asset, side: "SHORT", remaining: { quantity: "-10", entryVwap: "2" } })),
+    ],
+  }] }, { instruments: [
+    { id: "1", base: "HYPE", connector: "hyperliquid" },
+    ...["ADA", "XRP", "UNI", "AAVE"].map((base, index) => ({ id: String(index + 2), base, connector: "hyperliquid" })),
+  ] }, { mark: { "1": "11", "2": "2", "3": "2", "4": "2", "5": "2" } });
+  assert.equal(positions.length, 5);
+  assert.ok(positions.every((position) => position.position_group === "HYPE / 4-asset short basket"));
+  const report = renderReport({ ...sampleComputedInput(), traders: [computeTrader({
+    display_name: "moritzpike vault",
+    positions: [],
+    pair_positions: positions,
+  })] }, sampleAnalysis());
+  assert.match(report, /LONG HYPE \/ SHORT 4-asset basket/);
+  assert.match(report, /\| HYPE \/ 4-asset short basket \| AAVE \| SHORT \|/);
 });
 
 test("renders a concise report without provider details", () => {

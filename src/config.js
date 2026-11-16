@@ -20,14 +20,6 @@ export const HYPERLIQUID_INFO_URL = process.env.HYPERLIQUID_INFO_URL || "https:/
 export const PUBLIC_DIR = resolve("public");
 export const RUNS_DIR = resolve("runs", "market-view");
 export const LOCAL_PORT = Number(process.env.PORT || 3000);
-export const PEAR_HUF_ASSET_SYMBOLS = {
-  "159": "HYPE",
-  "223": "LIT",
-  "110000": "XYZ100",
-  "110012": "GOOGL",
-  "110084": "AVGO",
-};
-
 export const sourceUrls = {
   hansolarLightlens: "https://lightlens.vercel.app/traders/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db",
   hansolarHypurrscan: "https://hypurrscan.io/address/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db#perps",
@@ -47,8 +39,7 @@ export const sourceUrls = {
   fhdHypurrscan: "https://hypurrscan.io/address/0x5cbdb794b3b36df58a7ce6c1a552f117f061103b#perps",
   imBallzyHypurrscan: "https://hypurrscan.io/address/0x39c3492e9171872eac6a99d9c0b6dbae5d4ae959#perps",
   hyperdash: "https://hyperdash.com/explore",
-  pearHufProfile: "https://app.pear.garden/copytrade/trader/7c5dd97c-6c01-45a2-a94b-a18c39faf913",
-  pearHufApi: "https://pro-gateway.pearprotocol.io/traders/7c5dd97c-6c01-45a2-a94b-a18c39faf913",
+  pearMoritzpikeVault: "https://vaults.pear.garden/0x69f2ed780a4cec49e552dbcd35a60f41368bc362",
 };
 
 export const marketViewHypurrscanOrderSources = [

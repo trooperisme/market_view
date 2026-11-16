@@ -8,7 +8,6 @@ import {
   FIRECRAWL_SOURCE_CONCURRENCY,
   FRESH_MAX_AGE_MS,
   HYPERLIQUID_INFO_URL,
-  PEAR_HUF_ASSET_SYMBOLS,
   marketViewHypurrscanOrderSources,
   sourceUrls,
 } from "../config.js";
@@ -22,10 +21,8 @@ import {
   parseLightLensTrader,
   parseLighterPool,
   parseLighterPoolStats,
-  parsePearTraderPositions,
-  parsePearTraderUiPositions,
-  mergePearTraderUiPositions,
 } from "./parsers.js";
+import { collectPearVault } from "./pear-vault.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -352,8 +349,7 @@ export async function collectMarketViewInput({
     fhdHypurrscan,
     imBallzyHypurrscan,
     hyperdash,
-    pearHuf,
-    pearHufUi,
+    moritzpikeVault,
   ] = await runLimited([
     () => scrape(sourceUrls.hansolarLightlens, { outputDir: cacheDir, name: "hansolar-lightlens", timeout: 60000 }),
     () => optionalHyperliquidState(sourceUrls.hansolarHypurrscan, { outputDir: cacheDir, name: "hansolar-hypurrscan" }),
@@ -373,8 +369,13 @@ export async function collectMarketViewInput({
     () => optionalHyperliquidState(sourceUrls.fhdHypurrscan, { outputDir: cacheDir, name: "fhd" }),
     () => optionalHyperliquidState(sourceUrls.imBallzyHypurrscan, { outputDir: cacheDir, name: "imballzy" }),
     () => scrape(sourceUrls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"], timeout: 60000 }),
-    () => optionalPearTraderApi(sourceUrls.pearHufApi, { outputDir: cacheDir, name: "pear-huf-api" }),
-    () => scrape(sourceUrls.pearHufProfile, { outputDir: cacheDir, name: "pear-huf-ui", formats: ["markdown"], waitFor: 7000, timeout: 60000 }),
+    async () => {
+      try {
+        return { ...(await collectPearVault(sourceUrls.pearMoritzpikeVault, { outputDir: cacheDir })), status: "available", source_name: "pear-moritzpike-vault" };
+      } catch (error) {
+        return { pairPositions: [], positionCount: 0, status: "unavailable", source_name: "pear-moritzpike-vault", error: error.message };
+      }
+    },
   ], sourceConcurrency);
 
   const openOrderScrapes = includeOpenOrders
@@ -401,9 +402,6 @@ export async function collectMarketViewInput({
     parseHyperliquidAssetPositions(convexityBtc.state),
     "Hyperliquid",
   );
-  const pearHufApiPositions = parsePearTraderPositions(pearHuf.payload, { assetSymbols: PEAR_HUF_ASSET_SYMBOLS });
-  const pearHufUiPositions = parsePearTraderUiPositions(pearHufUi.markdown);
-  const pearHufPairPositions = mergePearTraderUiPositions(pearHufApiPositions, pearHufUiPositions);
 
   const input = {
     run_label: "Market View Live Scrape",
@@ -430,7 +428,7 @@ export async function collectMarketViewInput({
       fhdHypurrscan,
       imBallzyHypurrscan,
       hyperdash,
-      pearHuf,
+      moritzpikeVault,
       ...openOrderScrapes,
     ]
       .filter((source) => source.status === "unavailable")
@@ -539,23 +537,20 @@ export async function collectMarketViewInput({
         positions: imBallzyPositions,
       },
       {
-        name: "Huf",
-        display_name: "Huf",
-        source: "Pear pair trades",
-        account_stats: pearHuf.payload
-          ? `Pear API live | ${pearHufPairPositions.length} leg${pearHufPairPositions.length === 1 ? "" : "s"} | ${pearHuf.payload.followerCount || 0} followers`
-          : "Pear API position data unavailable",
-        status: pearHuf.status === "available" ? undefined : "positions_unavailable",
+        name: "moritzpike vault",
+        display_name: "moritzpike vault",
+        source: "Pear Vault",
+        account_stats: moritzpikeVault.status === "available"
+          ? `Live Pear vault | ${moritzpikeVault.positionCount} open pair${moritzpikeVault.positionCount === 1 ? "" : "s"}`
+          : "Live Pear vault positions unavailable",
+        status: moritzpikeVault.status === "available" ? undefined : "positions_unavailable",
         positions: [],
-        pair_positions: pearHufPairPositions,
-        pair_positions_status: pearHuf.status === "available"
-          ? pearHufPairPositions.length ? "available" : "empty"
+        pair_positions: moritzpikeVault.pairPositions,
+        pair_positions_status: moritzpikeVault.status === "available"
+          ? moritzpikeVault.pairPositions.length ? "available" : "empty"
           : "unavailable",
-        pair_ui_status: pearHufUi.status === "unavailable"
-          ? "unavailable"
-          : pearHufUiPositions.length ? "available" : "empty",
-        pair_source_url: sourceUrls.pearHufApi,
-        pair_profile_url: sourceUrls.pearHufProfile,
+        pair_source_url: sourceUrls.pearMoritzpikeVault,
+        pair_profile_url: sourceUrls.pearMoritzpikeVault,
       },
       {
         name: "0xKyoto",
