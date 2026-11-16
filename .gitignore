@@ -1,6 +1,13 @@
-.DS_Store
 .env
+.env.*
+!.env.example
+
+.DS_Store
+.firecrawl/
+.playwright-mcp/
+.vercel/
 node_modules/
 runs/
-*.log
-.vercel
+supabase/.temp/
+*.tar.gz
+*.tmp

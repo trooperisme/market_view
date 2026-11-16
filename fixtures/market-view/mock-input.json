@@ -476,27 +476,6 @@
       ]
     },
     {
-      "name": "NYP",
-      "display_name": "NYP — Not YOUR pool",
-      "source": "Lighter Pool",
-      "account_stats": "APR 96.47% | TVL $1,103,800.35 | 1 active position",
-      "positions": [
-        {
-          "symbol": "BTC",
-          "side": "short",
-          "leverage": "30x",
-          "size": "40.00000",
-          "position_value_usd": 3118720,
-          "entry": "$74,750.6",
-          "mark": "$77,968.0",
-          "unrealized_pnl": "-$128,696.00",
-          "funding": "-$4,874.67",
-          "liquidation": "$104,315.6",
-          "category": "crypto"
-        }
-      ]
-    },
-    {
       "name": "K pool",
       "display_name": "K pool",
       "source": "Lighter Pool",
@@ -607,177 +586,16 @@
           "category": "crypto"
         }
       ]
+    },
+    {
+      "name": "0xKyoto",
+      "display_name": "0xKyoto",
+      "source": "Hypurrscan",
+      "account_stats": "Live Hypurrscan scrape | Wallet 0x06184a3d663dae6f40420cb536dcab7fe9492475 | 0 active positions",
+      "status": "no_active_positions",
+      "positions": []
     }
   ],
-  "coinsense": {
-    "source": "CoinSense Vault",
-    "account_value": "Unavailable",
-    "longs_ratio": "Unavailable",
-    "shorts_ratio": "Unavailable",
-    "positions": [
-      {
-        "rank": 1,
-        "coin": "ZEC",
-        "size": "1.0500",
-        "position_value": "$699.11",
-        "unrealized_pnl": "$135.29",
-        "side": "long"
-      },
-      {
-        "rank": 2,
-        "coin": "ETH",
-        "size": "-0.2839",
-        "position_value": "-$607.40",
-        "unrealized_pnl": "$1.51",
-        "side": "short"
-      },
-      {
-        "rank": 3,
-        "coin": "HYPE",
-        "size": "7.0100",
-        "position_value": "$409.78",
-        "unrealized_pnl": "$27.11",
-        "side": "long"
-      },
-      {
-        "rank": 4,
-        "coin": "BTC",
-        "size": "-0.0050",
-        "position_value": "-$387.53",
-        "unrealized_pnl": "-$4.39",
-        "side": "short"
-      },
-      {
-        "rank": 5,
-        "coin": "SOL",
-        "size": "-3.0400",
-        "position_value": "-$264.00",
-        "unrealized_pnl": "-$3.12",
-        "side": "short"
-      },
-      {
-        "rank": 6,
-        "coin": "DOGE",
-        "size": "-2293.0000",
-        "position_value": "-$242.65",
-        "unrealized_pnl": "$6.74",
-        "side": "short"
-      },
-      {
-        "rank": 7,
-        "coin": "PURR",
-        "size": "-2000.0000",
-        "position_value": "-$222.28",
-        "unrealized_pnl": "-$18.81",
-        "side": "short"
-      },
-      {
-        "rank": 8,
-        "coin": "NEAR",
-        "size": "111.6000",
-        "position_value": "$194.15",
-        "unrealized_pnl": "$7.63",
-        "side": "long"
-      },
-      {
-        "rank": 9,
-        "coin": "ONDO",
-        "size": "416.0000",
-        "position_value": "$168.30",
-        "unrealized_pnl": "$9.66",
-        "side": "long"
-      },
-      {
-        "rank": 10,
-        "coin": "XRP",
-        "size": "-112.0000",
-        "position_value": "-$154.48",
-        "unrealized_pnl": "$0.12",
-        "side": "short"
-      },
-      {
-        "rank": 11,
-        "coin": "TON",
-        "size": "73.7000",
-        "position_value": "$151.45",
-        "unrealized_pnl": "-$0.94",
-        "side": "long"
-      },
-      {
-        "rank": 12,
-        "coin": "ZRO",
-        "size": "-94.5000",
-        "position_value": "-$131.14",
-        "unrealized_pnl": "$0.22",
-        "side": "short"
-      },
-      {
-        "rank": 13,
-        "coin": "DOT",
-        "size": "-83.0000",
-        "position_value": "-$105.89",
-        "unrealized_pnl": "-$4.99",
-        "side": "short"
-      },
-      {
-        "rank": 14,
-        "coin": "SUI",
-        "size": "-85.7000",
-        "position_value": "-$95.64",
-        "unrealized_pnl": "-$18.15",
-        "side": "short"
-      },
-      {
-        "rank": 15,
-        "coin": "BLAST",
-        "size": "202162.0000",
-        "position_value": "$91.78",
-        "unrealized_pnl": "-$13.90",
-        "side": "long"
-      },
-      {
-        "rank": 16,
-        "coin": "TAO",
-        "size": "-0.2910",
-        "position_value": "-$82.41",
-        "unrealized_pnl": "-$3.20",
-        "side": "short"
-      },
-      {
-        "rank": 17,
-        "coin": "ETC",
-        "size": "-8.9900",
-        "position_value": "-$81.26",
-        "unrealized_pnl": "-$7.88",
-        "side": "short"
-      },
-      {
-        "rank": 18,
-        "coin": "SPX",
-        "size": "203.4000",
-        "position_value": "$81.20",
-        "unrealized_pnl": "$3.71",
-        "side": "long"
-      },
-      {
-        "rank": 19,
-        "coin": "ALT",
-        "size": "10510.0000",
-        "position_value": "$79.43",
-        "unrealized_pnl": "$1.69",
-        "side": "long"
-      },
-      {
-        "rank": 20,
-        "coin": "PUMP",
-        "size": "44188.0000",
-        "position_value": "$78.79",
-        "unrealized_pnl": "$1.99",
-        "side": "long"
-      }
-    ]
-  },
-  "coinsense_screenshot_url": null,
   "hyperdash_cohorts": [
     {
       "slug": "extremely_profitable",
