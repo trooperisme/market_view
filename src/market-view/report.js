@@ -90,31 +90,8 @@ export function renderReport(input, analysis, model) {
   });
 
   lines.push("");
-  lines.push("## STEP 2 — CoinSense Vault Monitor");
   lines.push("");
-  lines.push(`Source: ${input.coinsense.source}`);
-  if (input.coinsense.chart_image?.path) {
-    lines.push("");
-    lines.push(`![CoinSense Vault Longs and Shorts Chart](${input.coinsense.chart_image.path})`);
-  } else if (input.coinsense.chart_image?.status === "unavailable") {
-    lines.push("");
-    lines.push(`CoinSense chart image: unavailable (${input.coinsense.chart_image.error})`);
-  }
-  lines.push("");
-  lines.push(`Account Value: ${input.coinsense.account_value}`);
-  lines.push(`Longs Ratio: ${input.coinsense.longs_ratio}`);
-  lines.push(`Shorts Ratio: ${input.coinsense.shorts_ratio}`);
-  lines.push("");
-  lines.push("Top 5 positions:");
-  lines.push("");
-  lines.push("| # | Coin | Side | Size | Position Value | Unrealized PnL |");
-  lines.push("|---:|---|---|---:|---:|---:|");
-  for (const position of input.coinsense.positions.slice(0, 5)) {
-    lines.push(`| ${position.rank} | ${position.coin} | ${position.side} ${sideArrow(position.side)} | ${position.size} | ${position.position_value} | ${position.unrealized_pnl} |`);
-  }
-
-  lines.push("");
-  lines.push("## STEP 3 — Hyperdash Cohort Sentiment (All-Time PNL)");
+  lines.push("## STEP 2 — Hyperdash Cohort Sentiment (All-Time PNL)");
   lines.push("");
   lines.push("| Segment | Bias | Long | Short | Trend |");
   lines.push("|---|---|---:|---:|---|");
@@ -134,9 +111,6 @@ export function renderReport(input, analysis, model) {
   lines.push("### Macro Signals");
   for (const bullet of analysis.final_analysis.macro_signals || []) lines.push(`- ${bullet}`);
   lines.push("");
-  lines.push("### CoinSense Vault Summary");
-  for (const bullet of analysis.final_analysis.coinsense_summary || []) lines.push(`- ${bullet}`);
-
   return `${lines.join("\n")}\n`;
 }
 

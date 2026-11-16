@@ -76,7 +76,6 @@ The report includes:
 - total long and short exposure
 - directional arrows: bullish `↑`, bearish `↓`, neutral or mixed `→`
 - per-trader quick reads
-- CoinSense vault monitor section
 - Hyperdash cohort sentiment table
 - final crypto, macro, and vault synthesis
 
@@ -94,4 +93,4 @@ MARKET_VIEW_USER=admin
 MARKET_VIEW_PASSWORD=your_password_here
 ```
 
-Generated Vercel reports embed the cropped CoinSense chart image directly in the markdown response because Vercel serverless storage is stateless. The browser UI also keeps recent snapshots in localStorage for quick review.
+The browser UI keeps recent snapshots in localStorage for quick review.

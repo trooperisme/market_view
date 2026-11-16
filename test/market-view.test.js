@@ -70,7 +70,7 @@ test("renders report sections and model name", () => {
   const input = sampleComputedInput();
   const report = renderReport(input, sampleAnalysis(), "nvidia/nemotron-3-super-120b-a12b:free");
   assert.match(report, /STEP 1/);
-  assert.match(report, /CoinSense Vault Monitor/);
+  assert.doesNotMatch(report, /CoinSense/i);
   assert.match(report, /Hyperdash Cohort Sentiment/);
   assert.match(report, /nvidia\/nemotron-3-super-120b-a12b:free/);
 });
@@ -146,7 +146,6 @@ test("workflow smoke uses fallback analysis without OpenRouter key", async () =>
     const result = await generateMarketViewReport({
       inputData: sampleRawInput(),
       outputDir,
-      coinsenseImage: false,
     });
     assert.equal(result.model, "nvidia/nemotron-3-super-120b-a12b:free");
     assert.match(result.report, /Fallback analysis used because OPENROUTER_API_KEY is not set/);
@@ -167,13 +166,6 @@ function sampleRawInput() {
         { symbol: "BTC", side: "long", position_value_usd: 100, size: "1" },
       ],
     }],
-    coinsense: {
-      source: "CoinSense Vault",
-      account_value: "$100",
-      longs_ratio: "60%",
-      shorts_ratio: "40%",
-      positions: [{ rank: 1, coin: "BTC", side: "long", size: "1", position_value: "$100", unrealized_pnl: "$1" }],
-    },
     hyperdash_cohorts: [
       { slug: "profitable", cohort: "Profitable", sentiment: "Bullish ↑", long: "$2M", short: "$1M" },
     ],
@@ -207,7 +199,6 @@ function sampleAnalysis() {
       hyperdash_cohort_conclusion: "Profitable cohorts lean long.",
       crypto_signals: ["BTC long."],
       macro_signals: ["No macro signal."],
-      coinsense_summary: ["CoinSense leans long."],
     },
   };
 }

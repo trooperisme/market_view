@@ -1,11 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PNG } from "pngjs";
-import { COINSENSE_VAULT_URL, FIRECRAWL_API_URL, HYPERDASH_TREND_LAYOUT } from "../config.js";
-
-const execFileAsync = promisify(execFile);
+import { HYPERDASH_TREND_LAYOUT } from "../config.js";
 
 export function cropPng(buffer, crop) {
   const source = PNG.sync.read(buffer);
@@ -23,90 +19,6 @@ export function cropPng(buffer, crop) {
   }
 
   return PNG.sync.write(target);
-}
-
-export function cropCoinsenseVaultSummary(buffer) {
-  const source = PNG.sync.read(buffer);
-  const crop = {
-    x: Math.round(source.width * 0.118),
-    y: Math.round(source.height * 0.245),
-    width: Math.round(source.width * 0.858),
-    height: Math.round(source.height * 0.47),
-  };
-
-  return cropPng(buffer, crop);
-}
-
-async function scrapeCoinsenseScreenshot(scrapeOutputPath) {
-  if (process.env.FIRECRAWL_API_KEY) {
-    const response = await fetch(`${FIRECRAWL_API_URL}/v2/scrape`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url: COINSENSE_VAULT_URL,
-        formats: ["markdown", "screenshot"],
-        waitFor: 7000,
-        maxAge: 0,
-      }),
-    });
-    const body = await response.json();
-    await writeFile(scrapeOutputPath, JSON.stringify(body, null, 2));
-    if (!response.ok) throw new Error(`Firecrawl API scrape failed: ${response.status} ${JSON.stringify(body)}`);
-    return body.screenshot || body.data?.screenshot;
-  }
-
-  await execFileAsync("firecrawl", [
-    "scrape",
-    COINSENSE_VAULT_URL,
-    "--format",
-    "markdown,screenshot",
-    "--wait-for",
-    "7000",
-    "--pretty",
-    "--max-age",
-    "0",
-    "-o",
-    scrapeOutputPath,
-  ], {
-    cwd: process.cwd(),
-    maxBuffer: 25 * 1024 * 1024,
-    env: process.env,
-  });
-
-  const scrape = JSON.parse(await readFile(scrapeOutputPath, "utf8"));
-  return scrape.screenshot || scrape.data?.screenshot;
-}
-
-export async function captureCoinsenseImage(outputDir, { embedImage = false, screenshotUrl = null } = {}) {
-  const assetsDir = join(outputDir, "assets");
-  await mkdir(assetsDir, { recursive: true });
-  const scrapeOutputPath = join(outputDir, "coinsense-screenshot-scrape.json");
-
-  try {
-    const sourceScreenshotUrl = screenshotUrl || await scrapeCoinsenseScreenshot(scrapeOutputPath);
-    if (!sourceScreenshotUrl) throw new Error("Firecrawl scrape returned no screenshot URL.");
-    const response = await fetch(sourceScreenshotUrl);
-    if (!response.ok) throw new Error(`Screenshot download failed: ${response.status}`);
-    const imageBuffer = Buffer.from(await response.arrayBuffer());
-    const croppedImageBuffer = cropCoinsenseVaultSummary(imageBuffer);
-    await writeFile(join(assetsDir, "coinsense-vault.png"), croppedImageBuffer);
-    return {
-      path: embedImage ? `data:image/png;base64,${croppedImageBuffer.toString("base64")}` : "assets/coinsense-vault.png",
-      source: COINSENSE_VAULT_URL,
-      status: "ok",
-    };
-  } catch (error) {
-    await writeFile(join(outputDir, "coinsense-image-error.txt"), error.message);
-    return {
-      path: null,
-      source: COINSENSE_VAULT_URL,
-      status: "unavailable",
-      error: error.message,
-    };
-  }
 }
 
 export function cropHyperdashTrendImages(buffer) {

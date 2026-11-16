@@ -181,29 +181,6 @@ export function parseLighterPoolStats(markdown, positions) {
   return `APR ${apr} | TVL ${tvl} | ${positions.length} active position${positions.length === 1 ? "" : "s"}`;
 }
 
-export function parseCoinsense(markdown) {
-  const table = extractTables(markdown).find((candidate) => candidate.header.includes("Coin") && candidate.header.includes("Position Value"));
-  const accountValue = markdown.match(/Account Value\s+###\s+(\$[\d,.]+)/s)?.[1] || "Unavailable";
-  const longsRatio = markdown.match(/Longs Ratio\s+###\s+([\d.]+%)/s)?.[1] || "Unavailable";
-  const shortsRatio = markdown.match(/Shorts Ratio\s+###\s+([\d.]+%)/s)?.[1] || "Unavailable";
-  const positions = (table?.rows || []).slice(0, 20).map((row) => ({
-    rank: Number(row[0]),
-    coin: row[1],
-    size: row[2],
-    position_value: row[3],
-    unrealized_pnl: row[4],
-    side: sideFromText(row[5]),
-  })).filter((position) => position.coin && position.side !== "unknown");
-
-  return {
-    source: "CoinSense Vault",
-    account_value: accountValue,
-    longs_ratio: longsRatio,
-    shorts_ratio: shortsRatio,
-    positions,
-  };
-}
-
 export function parseHyperdashCohorts(markdown) {
   const expected = [
     ["extremely_profitable", "Extremely Profitable"],

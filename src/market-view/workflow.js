@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { DEFAULT_INPUT, DEFAULT_MODEL, marketViewRunDir } from "../config.js";
-import { captureCoinsenseImage, captureHyperdashTrendImages } from "./assets.js";
+import { captureHyperdashTrendImages } from "./assets.js";
 import { buildComputedInput } from "./compute.js";
 import { collectMarketViewInput } from "./collectors.js";
 import { callOpenRouter, fallbackAnalysis } from "./llm.js";
@@ -13,7 +13,6 @@ export async function generateMarketViewReport({
   live = false,
   model = DEFAULT_MODEL,
   outputDir = null,
-  coinsenseImage = true,
   embedImages = false,
 } = {}) {
   const resolvedOutputDir = resolve(outputDir || marketViewRunDir());
@@ -22,12 +21,6 @@ export async function generateMarketViewReport({
     ? await collectMarketViewInput({ outputDir: resolvedOutputDir })
     : JSON.parse(await readFile(resolve(inputPath), "utf8")));
   const input = buildComputedInput(rawInput);
-  if (coinsenseImage) {
-    input.coinsense.chart_image = await captureCoinsenseImage(resolvedOutputDir, {
-      embedImage: embedImages,
-      screenshotUrl: input.coinsense_screenshot_url,
-    });
-  }
   const hyperdashTrendMap = await captureHyperdashTrendImages(
     resolvedOutputDir,
     input.hyperdash_screenshot_url,

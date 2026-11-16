@@ -28,7 +28,6 @@ export default async function handler(req, res) {
       live: true,
       model: body.model || DEFAULT_MODEL,
       outputDir,
-      coinsenseImage: true,
       embedImages: true,
     });
 

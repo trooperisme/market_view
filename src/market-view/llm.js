@@ -17,7 +17,6 @@ Return strict JSON only with this schema:
     "hyperdash_cohort_conclusion": "2-3 sentence comparison of profitable vs unprofitable cohorts",
     "crypto_signals": ["2-4 concise bullets"],
     "macro_signals": ["2-4 concise bullets"],
-    "coinsense_summary": ["1-2 concise bullets"]
   }
 }
 
@@ -25,7 +24,6 @@ Rules:
 - Every trader in input.traders must have one quick read.
 - Mention directional bias with arrows where natural: bullish ↑, bearish ↓, neutral →, mixed →.
 - Distinguish crypto positioning from macro/commodity positioning.
-- For CoinSense, emphasize the largest position and overall long/short ratio.
 - For Hyperdash, compare profitable cohorts versus unprofitable cohorts using input.hyperdash_comparison.
 - Do not write markdown in JSON values.
 
@@ -47,11 +45,6 @@ export function fallbackAnalysis(input, reason = "OpenRouter unavailable") {
     trader: trader.display_name,
     text: `${trader.bias}; ${pct(trader.long_pct)} long versus ${pct(trader.short_pct)} short. Largest exposure: ${describeLargestPositions(trader)}.`,
   }));
-  const coinsensePositions = input.coinsense?.positions || [];
-  const largestCoinsense = coinsensePositions[0]
-    ? `${coinsensePositions[0].coin} ${coinsensePositions[0].side} (${coinsensePositions[0].position_value})`
-    : "no active CoinSense position";
-
   return {
     quick_reads: quickReads,
     final_analysis: {
@@ -62,10 +55,6 @@ export function fallbackAnalysis(input, reason = "OpenRouter unavailable") {
       ],
       macro_signals: [
         "Macro signal is derived from positions tagged as commodity or macro symbols in the trader tables.",
-      ],
-      coinsense_summary: [
-        `CoinSense ratio: ${input.coinsense?.longs_ratio || "Unavailable"} long versus ${input.coinsense?.shorts_ratio || "Unavailable"} short.`,
-        `Largest listed CoinSense position: ${largestCoinsense}.`,
       ],
     },
   };

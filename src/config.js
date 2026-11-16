@@ -8,7 +8,6 @@ export const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS ||
 export const PUBLIC_DIR = resolve("public");
 export const RUNS_DIR = resolve("runs", "market-view");
 export const LOCAL_PORT = Number(process.env.PORT || 3000);
-export const COINSENSE_VAULT_URL = "https://www.coinsense.app/vault";
 
 export const sourceUrls = {
   hansolarLightlens: "https://lightlens.vercel.app/traders/0x9b8d146ab4b61c281b993e3f85066249a6e9b0db",
@@ -26,7 +25,6 @@ export const sourceUrls = {
   tommy: "https://hypurrscan.io/address/0x83b1385d8126ecf64bfb3b4254d67eb9db753bcc#perps",
   tommyAlt: "https://hypurrscan.io/address/0x57B8cFc502f14CC9eF77668D2208f001e1cCB4fC#perps",
   bmwball56: "https://hypurrscan.io/address/0xaf6f7a06f7bfb3bdf7bcd2c751564f4990d1efc7#perps",
-  coinsense: COINSENSE_VAULT_URL,
   hyperdash: "https://hyperdash.com/explore",
 };
 

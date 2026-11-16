@@ -28,7 +28,6 @@ function parseArgs(argv) {
     input: DEFAULT_INPUT,
     model: DEFAULT_MODEL,
     outputDir: null,
-    coinsenseImage: true,
     live: false,
   };
 
@@ -38,7 +37,6 @@ function parseArgs(argv) {
     else if (arg === "--input") args.input = argv[++i];
     else if (arg === "--model") args.model = argv[++i];
     else if (arg === "--output-dir") args.outputDir = argv[++i];
-    else if (arg === "--no-coinsense-image") args.coinsenseImage = false;
     else if (arg === "--live") args.live = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -57,7 +55,6 @@ async function main() {
     inputPath: args.input,
     model: args.model,
     outputDir: args.outputDir,
-    coinsenseImage: args.coinsenseImage,
     live: args.live,
   });
   console.log(result.report);

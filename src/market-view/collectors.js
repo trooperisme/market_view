@@ -4,7 +4,6 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { FIRECRAWL_API_URL, FRESH_MAX_AGE_MS, sourceUrls } from "../config.js";
 import {
-  parseCoinsense,
   parseGiverTrader,
   parseHyperdashCohorts,
   parseHypurrscanTrader,
@@ -101,7 +100,6 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     tommy,
     tommyAlt,
     bmwball56,
-    coinsense,
     hyperdash,
   ] = await runLimited([
     () => scrapeMarkdown(sourceUrls.hansolarLightlens, { outputDir: cacheDir, name: "hansolar-lightlens" }),
@@ -119,7 +117,6 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     () => scrapeMarkdown(sourceUrls.tommy, { outputDir: cacheDir, name: "tommy" }),
     () => scrapeMarkdown(sourceUrls.tommyAlt, { outputDir: cacheDir, name: "tommy-alt" }),
     () => scrapeMarkdown(sourceUrls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
-    () => scrapeMarkdown(sourceUrls.coinsense, { outputDir: cacheDir, name: "coinsense", formats: ["markdown", "screenshot"] }),
     () => scrapeMarkdown(sourceUrls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
 
@@ -234,8 +231,6 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
         positions: kPoolPositions,
       },
     ],
-    coinsense: parseCoinsense(coinsense.markdown),
-    coinsense_screenshot_url: coinsense.screenshot || null,
     hyperdash_cohorts: parseHyperdashCohorts(hyperdash.markdown),
     hyperdash_screenshot_url: hyperdash.screenshot || null,
   };

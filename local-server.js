@@ -37,7 +37,6 @@ async function runMarketView({ model }) {
     live: true,
     model: model || DEFAULT_MODEL,
     outputDir: join(RUNS_DIR, `web-${timestamp()}`),
-    coinsenseImage: true,
   });
 }
 
