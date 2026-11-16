@@ -93,4 +93,4 @@ Generated Vercel reports embed the cropped CoinSense chart image directly in the
 
 ## CoinRotator market trends
 
-The dashboard reads CoinRotator Market Health and BTC analysis through `/api/market-trends`. The endpoint extracts daily UP/DOWN/HODL breadth history and BTC/USD daily and weekly direction with streak lengths. It rejects incomplete or older than 36-hour source readings and caches a successful result in memory for one hour. No separate API key or CEX SMW endpoint is required.
+The dashboard reads CoinRotator Market Health and BTC analysis through `/api/market-trends`. The endpoint extracts daily UP/DOWN/HODL breadth history and BTC/USD daily and weekly direction with streak lengths. It rejects incomplete or older than 36-hour source readings and caches a successful result in memory for one hour. Direct CoinRotator requests use browser headers. If CoinRotator returns 403, the endpoint falls back to Firecrawl; that path requires a valid `FIRECRAWL_API_KEY`. No CEX SMW endpoint is required.
