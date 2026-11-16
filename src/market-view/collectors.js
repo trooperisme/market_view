@@ -100,6 +100,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     tommy,
     tommyAlt,
     bmwball56,
+    convexityBtc,
     hyperdash,
   ] = await runLimited([
     () => scrapeMarkdown(sourceUrls.hansolarLightlens, { outputDir: cacheDir, name: "hansolar-lightlens" }),
@@ -117,6 +118,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     () => scrapeMarkdown(sourceUrls.tommy, { outputDir: cacheDir, name: "tommy" }),
     () => scrapeMarkdown(sourceUrls.tommyAlt, { outputDir: cacheDir, name: "tommy-alt" }),
     () => scrapeMarkdown(sourceUrls.bmwball56, { outputDir: cacheDir, name: "bmwball56" }),
+    () => scrapeMarkdown(sourceUrls.convexityBtc, { outputDir: cacheDir, name: "convexity-btc" }),
     () => scrapeMarkdown(sourceUrls.hyperdash, { outputDir: cacheDir, name: "hyperdash", formats: ["markdown", "screenshot"] }),
   ]);
 
@@ -133,6 +135,7 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
     ...withPositionSource(parseHypurrscanTrader(tommy.markdown), "Hypurrscan 0x83b138"),
     ...withPositionSource(parseHypurrscanTrader(tommyAlt.markdown), "Hypurrscan 0x57B8cF"),
   ];
+  const convexityBtcPositions = parseHypurrscanTrader(convexityBtc.markdown);
 
   const input = {
     run_label: "Market View Live Scrape",
@@ -213,6 +216,14 @@ export async function collectMarketViewInput({ outputDir = join("runs", "market-
         account_stats: "Live scrape maxAge=0",
         status: parseHypurrscanTrader(bmwball56.markdown).length ? undefined : "no_active_positions",
         positions: parseHypurrscanTrader(bmwball56.markdown),
+      },
+      {
+        name: "+convexity (BTC)",
+        display_name: "+convexity (BTC)",
+        source: "Hypurrscan",
+        account_stats: `Live scrape maxAge=0 | Wallet 0x5661a070eb13c7c55ac3210b2447d4bea426cbf5 | ${convexityBtcPositions.length} active position${convexityBtcPositions.length === 1 ? "" : "s"}`,
+        status: convexityBtcPositions.length ? undefined : "no_active_positions",
+        positions: withPositionSource(convexityBtcPositions, "Hypurrscan 0x5661a0"),
       },
       {
         name: "NYP",
