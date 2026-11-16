@@ -13,6 +13,13 @@
       }
     },
     {
+      "src": "api/market-view/daily.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 300
+      }
+    },
+    {
       "src": "api/**/*.js",
       "use": "@vercel/node"
     },
@@ -21,14 +28,32 @@
       "use": "@vercel/static"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/market-view/daily",
+      "schedule": "0 1 * * *"
+    }
+  ],
   "routes": [
+    {
+      "src": "/api/atlas-status",
+      "dest": "/api/atlas-status.js"
+    },
     {
       "src": "/api/health",
       "dest": "/api/health.js"
     },
     {
+      "src": "/api/market-trends",
+      "dest": "/api/market-trends.js"
+    },
+    {
       "src": "/api/market-view/run",
       "dest": "/api/market-view/run.js"
+    },
+    {
+      "src": "/api/market-view/daily",
+      "dest": "/api/market-view/daily.js"
     },
     {
       "src": "/api/market-view/snapshots",

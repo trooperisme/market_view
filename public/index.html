@@ -3,65 +3,74 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Market View Workflow</title>
-    <link rel="preconnect" href="https://images.unsplash.com" />
+    <meta name="theme-color" content="#090a08" />
+    <title>Market View</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/market-health.css" />
   </head>
   <body>
     <main class="app-shell">
       <section class="command-surface" aria-labelledby="workflow-title">
         <div class="command-copy">
-          <p class="eyebrow">Trader workflow</p>
+          <p class="eyebrow">Your market, made clear</p>
           <h1 id="workflow-title">Market View</h1>
-          <p class="lede">Run the trader position workflow, generate quick reads for each trader, and get a crypto plus macro market narrative.</p>
+          <p class="lede">A short read on what traders are doing and what stands out.</p>
         </div>
 
         <div class="run-panel" aria-label="Market View runner">
-          <div class="field-row">
-            <label for="model">OpenRouter model</label>
-            <select id="model">
-              <option value="openai/gpt-oss-120b:free">openai/gpt-oss-120b:free</option>
-              <option value="openai/gpt-oss-20b:free">openai/gpt-oss-20b:free</option>
-              <option value="openai/gpt-4o">openai/gpt-4o</option>
-              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
-            </select>
-          </div>
           <button id="run" class="run-button" type="button">
-            Run Market View
+            Refresh market read
           </button>
-          <p id="status" class="status-line" role="status">Ready. Uses the mock normalized fixture for this local test.</p>
+          <p id="status" class="status-line" role="status">Ready when you are.</p>
         </div>
-
-        <img
-          class="market-image"
-          alt="Trading terminal with market charts"
-          src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=900&q=80"
-        />
-      </section>
-
-      <section class="source-strip" aria-label="Workflow sources">
-        <div><span>LightLens + Hypurrscan + Lighter</span><strong>Hansolar</strong></div>
-        <div><span>Hyperdash</span><strong>Giver + cohorts</strong></div>
-        <div><span>Hypurrscan</span><strong>6 traders</strong></div>
-        <div><span>Lighter</span><strong>3 pools</strong></div>
-        <div><span>CoinSense</span><strong>Vault</strong></div>
       </section>
 
       <section class="snapshot-strip" aria-label="Saved report snapshots">
         <div class="snapshot-heading">
-          <span>Snapshots</span>
-          <strong>Previous Market View reports</strong>
+          <span>Recent</span>
+          <strong>Past reads</strong>
         </div>
         <div id="snapshots" class="snapshot-list">
           <button type="button" disabled>No snapshots loaded</button>
         </div>
       </section>
 
+      <section class="market-health" id="market-health" aria-labelledby="market-health-title">
+        <div class="market-health__topline">
+          <div class="market-health__title-block">
+            <span class="market-health__eyebrow">MARKET REGIME / CRYPTO BREADTH</span>
+            <h2 id="market-health-title">Is breadth at an extreme?</h2>
+          </div>
+          <div class="market-health__controls">
+            <span class="market-health__sample">LOADING MARKET DATA</span>
+            <span class="market-health__daily">DAILY</span>
+          </div>
+        </div>
+        <div class="market-health__readout" aria-live="polite">
+          <div class="market-health__regime"><span class="market-health__regime-dot"></span><span id="health-regime">LOADING</span></div>
+          <strong id="health-message">Checking market breadth</strong>
+          <p id="health-explanation">The latest breadth reading is being checked.</p>
+        </div>
+        <section class="btc-trend" aria-label="Bitcoin trend against USD">
+          <div class="btc-trend__label"><span>BTC <small>/ USD</small></span><small>PRICE DIRECTION</small></div>
+          <div class="btc-trend__metric" data-btc-period="daily"><small>DAILY · USD</small><strong class="btc-trend__state">UNAVAILABLE</strong><span class="btc-trend__streak">Streak unavailable</span></div>
+          <div class="btc-trend__metric" data-btc-period="weekly"><small>WEEKLY · USD</small><strong class="btc-trend__state">UNAVAILABLE</strong><span class="btc-trend__streak">Streak unavailable</span></div>
+          <div class="btc-trend__note"><a href="https://coinrotator.app/coin/bitcoin?tab=analysis" target="_blank" rel="noreferrer">CoinRotator ↗</a><span id="btc-trend-source">Loading source…</span></div>
+        </section>
+        <div class="market-health__chart-wrap">
+          <div class="market-health__legend"><span><i class="up"></i>UP</span><span><i class="down"></i>DOWN</span><span><i class="hold"></i>HODL</span><span class="market-health__chart-range">30D BREADTH HISTORY</span></div>
+          <div class="market-health__chart" id="health-chart" role="img" aria-label="30 day market breadth history with 60 percent extreme threshold"></div>
+          <div class="market-health__activity-label"><span>DAILY CHANGE SERIES UNAVAILABLE</span><span id="health-last-date">LATEST · CHECKING</span></div>
+          <div class="market-health__activity" id="health-activity" aria-label="Daily count of coins with changed regime"></div>
+        </div>
+        <div class="market-health__foot"><span>Loading CoinRotator data…</span><details><summary>How the extreme read works</summary><p>Each line is the share of reporting coins in that state. The dotted 60% line marks an extreme when UP or DOWN crosses it. HODL is the remaining share. This concept does not predict a reversal.</p></details></div>
+      </section>
+
       <section class="workspace">
         <article class="report-view" aria-label="Generated report">
           <div class="report-toolbar">
-            <h2>Report</h2>
-            <button id="copy" type="button">Copy markdown</button>
+            <h2>Market read</h2>
+            <button id="copy" type="button">Copy read</button>
           </div>
           <div id="report" class="report-output">
             <p class="empty-state">Run the workflow to generate the report.</p>
@@ -70,6 +79,8 @@
       </section>
     </main>
 
+    <script src="/market-health.js" defer></script>
+    <script src="/btc-usd-trend.js" defer></script>
     <script src="/app.js" type="module"></script>
   </body>
 </html>
