@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isAuthConfigured, isAuthorizedHeader, parseBasicAuth } from "../src/auth.js";
+import { isAuthConfigured, isAuthorizedCronRequest, isAuthorizedHeader, parseBasicAuth } from "../src/auth.js";
 
 function basic(user, password) {
   return `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
@@ -29,5 +29,18 @@ test("authorizes only configured matching credentials", () => {
     else process.env.MARKET_VIEW_USER = oldUser;
     if (oldPassword === undefined) delete process.env.MARKET_VIEW_PASSWORD;
     else process.env.MARKET_VIEW_PASSWORD = oldPassword;
+  }
+});
+
+test("authorizes only the configured Vercel cron bearer token", () => {
+  const oldSecret = process.env.CRON_SECRET;
+  process.env.CRON_SECRET = "cron-secret";
+  try {
+    assert.equal(isAuthorizedCronRequest({ headers: { authorization: "Bearer cron-secret" } }), true);
+    assert.equal(isAuthorizedCronRequest({ headers: { authorization: "Bearer wrong" } }), false);
+    assert.equal(isAuthorizedCronRequest({ headers: {} }), false);
+  } finally {
+    if (oldSecret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = oldSecret;
   }
 });

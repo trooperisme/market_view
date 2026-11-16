@@ -8,7 +8,7 @@ export default function handler(req, res) {
   res.status(200).json({
     ok: true,
     model: DEFAULT_MODEL,
-    hasOpenRouterKey: Boolean(process.env.OPENROUTER_API_KEY),
+    hasNvidiaKey: Boolean(process.env.NVIDIA_API_KEY),
     hasFirecrawlKey: Boolean(process.env.FIRECRAWL_API_KEY),
     runtime: "vercel",
   });

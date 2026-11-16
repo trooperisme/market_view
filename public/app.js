@@ -6,12 +6,12 @@ import {
   numericPositionValue,
   sortTableRowsByPositionValue,
 } from "./position-tools.js";
+import { ensureHyperdashDirectionalRead } from "./cohort-render.js";
 
 const runButton = document.querySelector("#run");
 const copyButton = document.querySelector("#copy");
 const statusLine = document.querySelector("#status");
 const reportEl = document.querySelector("#report");
-const modelSelect = document.querySelector("#model");
 const snapshotsEl = document.querySelector("#snapshots");
 
 let currentMarkdown = "";
@@ -71,6 +71,10 @@ function collectBrowserSnapshots() {
 
 function readBrowserSnapshots() {
   return collectBrowserSnapshots().slice(0, 20);
+}
+
+function browserSnapshotMatchesServer(snapshot, serverIds) {
+  return serverIds.has(snapshot.serverSnapshotId) || serverIds.has(snapshot.id.replace(/^browser-/, ""));
 }
 
 function pruneBrowserSnapshots(keep = MAX_BROWSER_SNAPSHOTS) {
@@ -199,8 +203,288 @@ function renderMarkdown(markdown) {
 }
 
 function renderReportView(markdown, normalized, comparisonSnapshot = null) {
-  reportEl.innerHTML = renderMarkdown(markdown);
+  const reportWithCohortRead = ensureHyperdashDirectionalRead(markdown, normalized);
+  currentMarkdown = reportWithCohortRead;
+  reportEl.innerHTML = renderMarkdown(reportWithCohortRead);
+  highlightImportantHyperdashCohorts(normalized);
+  collapsePositionDetails();
+  renderTraderPositionMixes(normalized);
+  enhanceOpenOrderTables();
   enhanceTraderPositionTables(normalized, comparisonSnapshot?.normalized || null);
+}
+
+function highlightImportantHyperdashCohorts(normalized) {
+  const table = Array.from(reportEl.querySelectorAll("table"))
+    .find((element) => Array.from(element.querySelectorAll("thead th")).some((cell) => cell.textContent.trim() === "Cohort"));
+  const cohorts = normalized?.hyperdash_cohorts || [];
+  if (!table || !cohorts.length) return;
+
+  table.classList.add("cohort-table");
+  const ordered = [...cohorts]
+    .sort((a, b) => Number(b.values_available) - Number(a.values_available) || b.net_share_pct - a.net_share_pct);
+  Array.from(table.querySelectorAll("tbody tr")).forEach((row, index) => {
+    const cohort = ordered[index];
+    if (!cohort?.is_significant) return;
+    row.classList.add("cohort-significant", `cohort-significant-${cohort.direction}`);
+    if (cohort.is_extreme) row.classList.add("cohort-extreme", `cohort-extreme-${cohort.direction}`);
+    const strength = cohort.is_extreme ? "extreme" : "significant";
+    row.setAttribute("aria-label", `${cohort.cohort}: ${strength} ${cohort.direction} positioning, ${cohort.net_share_pct}% net share`);
+  });
+}
+
+function collapseTraderSection({ headingText, statsPrefix, summaryLabel, detailsClass }) {
+  const heading = Array.from(reportEl.querySelectorAll("h2"))
+    .find((element) => element.textContent.trim() === headingText);
+  if (!heading) return;
+
+  const traderHeadings = [];
+  for (let node = heading.nextElementSibling; node && node.tagName !== "H2"; node = node.nextElementSibling) {
+    if (node.tagName === "H3") traderHeadings.push(node);
+  }
+
+  for (const traderHeading of traderHeadings) {
+    let accountStats = traderHeading.nextElementSibling;
+    if (accountStats?.tagName !== "P" || !accountStats.textContent.startsWith(statsPrefix)) accountStats = null;
+    accountStats?.classList.add("account-stats");
+
+    let firstPositionNode = accountStats ? accountStats.nextSibling : traderHeading.nextSibling;
+    let endNode = firstPositionNode;
+    const tables = [];
+    while (endNode && !(endNode.nodeType === Node.ELEMENT_NODE && endNode.tagName === "H3")) {
+      if (endNode.nodeType === Node.ELEMENT_NODE && endNode.tagName === "TABLE") tables.push(endNode);
+      endNode = endNode.nextSibling;
+    }
+    if (!tables.length) continue;
+
+    const details = document.createElement("details");
+    details.className = `position-details ${detailsClass}`;
+    const summary = document.createElement("summary");
+    summary.textContent = summaryLabel(tables);
+    details.appendChild(summary);
+
+    let node = firstPositionNode;
+    while (node && node !== endNode) {
+      const next = node.nextSibling;
+      if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "TABLE") {
+        const scrollContainer = document.createElement("div");
+        scrollContainer.className = "table-scroll";
+        scrollContainer.appendChild(node);
+        details.appendChild(scrollContainer);
+      } else {
+        details.appendChild(node);
+      }
+      node = next;
+    }
+    traderHeading.parentNode.insertBefore(details, endNode);
+  }
+}
+
+function collapsePositionDetails() {
+  collapseTraderSection({
+    headingText: "Largest positions by trader",
+    statsPrefix: "Account stats:",
+    summaryLabel: (tables) => {
+      const positionTable = tables.find((table) => Array.from(table.querySelectorAll("thead th"))
+        .some((cell) => ["Position Value", "Mkt Val"].includes(cell.textContent.trim())));
+      const orderTable = tables.find((table) => Array.from(table.querySelectorAll("thead th"))
+        .every((cell) => ["Token", "Side", "Price", "Value", "Size"].includes(cell.textContent.trim())));
+      const parts = [];
+      if (positionTable) {
+        const count = positionTable.querySelectorAll("tbody tr").length;
+        parts.push(`${count} position${count === 1 ? "" : "s"}`);
+      }
+      if (orderTable) {
+        const count = orderTable.querySelectorAll("tbody tr").length;
+        parts.push(`${count} open order group${count === 1 ? "" : "s"}`);
+      }
+      return `View ${parts.join(" · ") || "entity activity"}`;
+    },
+    detailsClass: "trader-position-details",
+  });
+}
+
+function traderPositionMix(trader) {
+  const positions = trader?.positions || [];
+  const longExposure = Number.isFinite(Number(trader?.long_exposure))
+    ? Number(trader.long_exposure)
+    : positions.filter((position) => position.side === "long")
+      .reduce((sum, position) => sum + numericPositionValue(position.position_value_usd), 0);
+  const shortExposure = Number.isFinite(Number(trader?.short_exposure))
+    ? Number(trader.short_exposure)
+    : positions.filter((position) => position.side === "short")
+      .reduce((sum, position) => sum + numericPositionValue(position.position_value_usd), 0);
+  const total = longExposure + shortExposure;
+  if (!total) return null;
+  const longPct = (longExposure / total) * 100;
+  const shortPct = (shortExposure / total) * 100;
+  return { longPct, shortPct };
+}
+
+function createTraderPositionMix(trader) {
+  const visual = document.createElement("div");
+  visual.className = "trader-position-mix";
+  const mix = traderPositionMix(trader);
+  if (!mix) {
+    visual.classList.add("trader-position-mix-unavailable");
+    visual.textContent = "Position mix unavailable — no active positions.";
+    return visual;
+  }
+
+  const header = document.createElement("div");
+  header.className = "trader-position-mix-header";
+  const label = document.createElement("span");
+  label.textContent = "Position mix";
+  const values = document.createElement("strong");
+  values.textContent = `Long ${mix.longPct.toFixed(1)}% · Short ${mix.shortPct.toFixed(1)}%`;
+  header.append(label, values);
+
+  const bar = document.createElement("div");
+  bar.className = "trader-position-bar";
+  bar.setAttribute("role", "img");
+  bar.setAttribute("aria-label", `Long ${mix.longPct.toFixed(1)}%, Short ${mix.shortPct.toFixed(1)}%`);
+  const long = document.createElement("span");
+  long.className = "trader-position-bar-long";
+  long.style.flexBasis = `${mix.longPct}%`;
+  const short = document.createElement("span");
+  short.className = "trader-position-bar-short";
+  short.style.flexBasis = `${mix.shortPct}%`;
+  bar.append(long, short);
+
+  visual.append(header, bar);
+  return visual;
+}
+
+function renderTraderPositionMixes(normalized) {
+  const traders = normalized?.traders || [];
+  if (!traders.length) return;
+  const section = Array.from(reportEl.querySelectorAll("h2"))
+    .find((element) => element.textContent.trim() === "Largest positions by trader");
+  if (!section) return;
+  const headings = [];
+  for (let node = section.nextElementSibling; node && node.tagName !== "H2"; node = node.nextElementSibling) {
+    if (node.tagName === "H3") headings.push(node);
+  }
+
+  headings.forEach((heading, index) => {
+    const trader = traders[index];
+    if (!trader) return;
+    let anchor = heading.nextElementSibling;
+    if (anchor?.classList.contains("account-stats")) anchor = anchor.nextElementSibling;
+
+    for (let node = heading.nextElementSibling; node && node.tagName !== "H2" && node.tagName !== "H3"; node = node.nextElementSibling) {
+      if (node.tagName === "P" && node.textContent.trim().startsWith("Position mix:")) node.remove();
+      if (node.classList?.contains("trader-position-details")) {
+        node.querySelectorAll("p").forEach((paragraph) => {
+          if (paragraph.textContent.trim().startsWith("Position mix:")) paragraph.remove();
+        });
+      }
+    }
+
+    anchor = heading.nextElementSibling;
+    if (anchor?.classList.contains("account-stats")) anchor = anchor.nextElementSibling;
+
+    const visual = createTraderPositionMix(trader);
+    heading.parentNode.insertBefore(visual, anchor);
+  });
+}
+
+function enhanceOpenOrderTables() {
+  const tables = Array.from(reportEl.querySelectorAll("table"))
+    .filter((table) => Array.from(table.querySelectorAll("thead th"))
+      .map((cell) => cell.textContent.trim())
+      .join("|") === "Token|Side|Price|Value|Size");
+
+  for (const table of tables) {
+    table.classList.add("open-order-table");
+    for (const row of table.querySelectorAll("tbody tr")) {
+      const sideCell = row.cells[1];
+      const side = sideCell?.textContent.trim().toLowerCase();
+      if (side === "buy" || side === "sell") {
+        sideCell.classList.add(`open-order-side-${side}`);
+      }
+
+      const token = row.cells[0]?.textContent || "";
+      if (!/\(\d+ orders?\)/i.test(token)) continue;
+      const sizeCell = row.cells[4];
+      if (!sizeCell) continue;
+      sizeCell.classList.add("open-order-size");
+      const chevron = document.createElement("span");
+      chevron.className = "open-order-chevron";
+      chevron.setAttribute("aria-hidden", "true");
+      chevron.textContent = "⌄";
+      sizeCell.appendChild(chevron);
+    }
+  }
+}
+
+function optionAssetTicker(position, row) {
+  return String(position?.symbol || row?.cells?.[0]?.textContent?.split(/\s+/)[0] || "Other")
+    .trim()
+    .toUpperCase();
+}
+
+function addOptionMarketValueSort(table) {
+  const headerCells = Array.from(table.querySelectorAll("thead th"));
+  const positionValueIndex = headerCells.findIndex((cell) => cell.textContent.trim() === "Mkt Val");
+  if (positionValueIndex === -1) return;
+
+  const sortButton = document.createElement("button");
+  sortButton.type = "button";
+  sortButton.className = "table-sort-button";
+  sortButton.dataset.sortDirection = "none";
+  sortButton.innerHTML = "<span>Mkt Val</span><span class=\"sort-caret\" aria-hidden=\"true\">↕</span>";
+  sortButton.setAttribute("aria-label", "Sort option contracts by market value");
+  headerCells[positionValueIndex].textContent = "";
+  headerCells[positionValueIndex].appendChild(sortButton);
+
+  sortButton.addEventListener("click", () => {
+    const nextDirection = sortButton.dataset.sortDirection === "asc" ? "desc" : "asc";
+    sortButton.dataset.sortDirection = nextDirection;
+    sortButton.querySelector(".sort-caret").textContent = nextDirection === "asc" ? "↑" : "↓";
+    sortTableRowsByPositionValue(table.querySelector("tbody"), nextDirection);
+  });
+}
+
+function groupOptionTableByAsset(table, orderedPositions) {
+  const rows = Array.from(table.querySelectorAll("tbody tr"));
+  const groups = new Map();
+
+  rows.forEach((row, rowIndex) => {
+    const position = orderedPositions[rowIndex];
+    row.dataset.positionValue = String(numericPositionValue(position?.position_value_usd));
+    const ticker = optionAssetTicker(position, row);
+    if (!groups.has(ticker)) groups.set(ticker, []);
+    groups.get(ticker).push(row);
+  });
+
+  const assetGroups = document.createElement("div");
+  assetGroups.className = "option-asset-groups";
+
+  for (const [ticker, assetRows] of [...groups.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const details = document.createElement("details");
+    details.className = "option-asset-details";
+
+    const summary = document.createElement("summary");
+    summary.textContent = ticker;
+    summary.setAttribute("aria-label", `${ticker}, ${assetRows.length} option contract${assetRows.length === 1 ? "" : "s"}`);
+    details.appendChild(summary);
+
+    const scrollContainer = document.createElement("div");
+    scrollContainer.className = "table-scroll option-contract-scroll";
+    const assetTable = table.cloneNode(false);
+    assetTable.classList.add("option-contract-table");
+    assetTable.appendChild(table.tHead.cloneNode(true));
+    const tbody = document.createElement("tbody");
+    assetRows.forEach((row) => tbody.appendChild(row));
+    assetTable.appendChild(tbody);
+    addOptionMarketValueSort(assetTable);
+    scrollContainer.appendChild(assetTable);
+    details.appendChild(scrollContainer);
+    assetGroups.appendChild(details);
+  }
+
+  const tableContainer = table.closest(".table-scroll");
+  if (tableContainer) tableContainer.replaceWith(assetGroups);
 }
 
 function enhanceTraderPositionTables(normalized, comparisonNormalized) {
@@ -208,24 +492,38 @@ function enhanceTraderPositionTables(normalized, comparisonNormalized) {
   if (!traders.length) return;
 
   const previousSizes = comparisonNormalized ? buildPositionSizeIndex(comparisonNormalized) : null;
-  const tables = Array.from(reportEl.querySelectorAll("table"));
+  const tables = Array.from(reportEl.querySelectorAll("table"))
+    .filter((table) => Array.from(table.querySelectorAll("thead th"))
+      .some((cell) => ["Position Value", "Mkt Val"].includes(cell.textContent.trim())));
   let tableIndex = 0;
 
   for (const trader of traders) {
     const positions = trader.positions || [];
     if (!positions.length) continue;
 
+    const orderedPositions = [...positions]
+      .sort((a, b) => Number(b.position_value_usd || 0) - Number(a.position_value_usd || 0));
+
     const table = tables[tableIndex];
     tableIndex += 1;
     if (!table) continue;
 
     const headerCells = Array.from(table.querySelectorAll("thead th"));
+    const isOptionTable = positions.some((position) => position.instrument_type === "option");
+    if (isOptionTable) {
+      table.classList.add("position-table");
+      groupOptionTableByAsset(table, orderedPositions);
+      continue;
+    }
+
     const positionValueIndex = headerCells.findIndex((cell) => cell.textContent.trim() === "Position Value");
     if (positionValueIndex === -1) continue;
 
     table.classList.add("position-table");
     const deltaHeader = document.createElement("th");
-    deltaHeader.textContent = "Delta %";
+    deltaHeader.textContent = "Position Δ %";
+    deltaHeader.title = "Percent change in absolute position size versus the previous snapshot. Formula: (current size − previous size) ÷ previous size. This is not Options Greek delta. New = no matching prior position; — = no comparison baseline or usable size.";
+    deltaHeader.setAttribute("aria-label", deltaHeader.title);
     headerCells[headerCells.length - 1].after(deltaHeader);
 
     const sortButton = document.createElement("button");
@@ -239,8 +537,7 @@ function enhanceTraderPositionTables(normalized, comparisonNormalized) {
 
     const rows = Array.from(table.querySelectorAll("tbody tr"));
     rows.forEach((row, rowIndex) => {
-      const position = positions[rowIndex];
-      const cells = Array.from(row.children);
+      const position = orderedPositions[rowIndex];
       const positionValue = numericPositionValue(position?.position_value_usd);
       row.dataset.positionValue = String(positionValue);
 
@@ -254,7 +551,7 @@ function enhanceTraderPositionTables(normalized, comparisonNormalized) {
       const label = previousSizes ? deltaLabel(position?.size, priorSize) : "-";
       deltaCell.textContent = label;
       deltaCell.className = `delta-cell ${deltaClass(label)}`;
-      cells[cells.length - 1].after(deltaCell);
+      row.appendChild(deltaCell);
     });
 
     sortButton.addEventListener("click", () => {
@@ -269,14 +566,16 @@ function enhanceTraderPositionTables(normalized, comparisonNormalized) {
 async function runWorkflow() {
   runButton.disabled = true;
   copyButton.disabled = true;
-  reportEl.innerHTML = "<p class=\"empty-state\">Running Market View...</p>";
-  setStatus("Calling OpenRouter and generating trader quick reads.");
+  reportEl.innerHTML = "<p class=\"empty-state\">Putting together the latest read…</p>";
+  setStatus("Refreshing the market read…");
 
   try {
+    const previousBrowserSnapshot = collectBrowserSnapshots()
+      .find((snapshot) => snapshot.normalized?.hyperdash_cohorts?.length) || null;
     const response = await fetch("/api/market-view/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: modelSelect.value }),
+      body: JSON.stringify({}),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Workflow failed.");
@@ -284,18 +583,19 @@ async function runWorkflow() {
     currentMarkdown = payload.report;
     currentSnapshotId = payload.snapshotId;
     currentNormalized = payload.normalized || null;
-    const comparisonSnapshot = collectBrowserSnapshots().find((snapshot) => snapshot.normalized) || null;
+    const comparisonSnapshot = payload.comparisonSnapshot || previousBrowserSnapshot;
     renderReportView(currentMarkdown, currentNormalized, comparisonSnapshot);
-    const browserSnapshot = saveBrowserSnapshot(payload);
-    if (browserSnapshot.saved) setStatus(`Done. Generated with ${payload.model}.`);
-    else setStatus(`Done. Generated with ${payload.model}. Browser snapshot not saved (${browserSnapshot.reason}).`);
+    saveBrowserSnapshot(payload);
+    setStatus(payload.summaryFallback
+      ? "Updated. AI summary is unavailable, so this read is based on the position data."
+      : "Updated. Your market read is ready.");
     await loadSnapshots();
   } catch (error) {
     currentMarkdown = "";
     currentSnapshotId = null;
     currentNormalized = null;
-    reportEl.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
-    setStatus("Workflow failed.");
+    reportEl.innerHTML = "<p class=\"empty-state\">This read could not be refreshed. Try again in a moment.</p>";
+    setStatus("Couldn't refresh the market read.");
   } finally {
     runButton.disabled = false;
     copyButton.disabled = false;
@@ -309,11 +609,20 @@ async function loadSnapshots() {
     if (!response.ok) throw new Error(payload.error || "Could not load snapshots.");
     const browserSnapshots = readBrowserSnapshots();
     const serverSnapshots = payload.snapshots || [];
-    renderSnapshots([...browserSnapshots, ...serverSnapshots]);
+    const serverIds = new Set(serverSnapshots.map((snapshot) => snapshot.id));
+    const snapshots = [
+      ...serverSnapshots,
+      ...browserSnapshots.filter((snapshot) => !browserSnapshotMatchesServer(snapshot, serverIds)),
+    ];
+    renderSnapshots(snapshots);
+    if (!currentMarkdown && snapshots.length) await loadSnapshot(snapshots[0].id);
   } catch (error) {
     const browserSnapshots = readBrowserSnapshots();
-    if (browserSnapshots.length) renderSnapshots(browserSnapshots);
-    else snapshotsEl.innerHTML = `<button type="button" disabled>${escapeHtml(error.message)}</button>`;
+    if (browserSnapshots.length) {
+      renderSnapshots(browserSnapshots);
+      if (!currentMarkdown) await loadSnapshot(browserSnapshots[0].id);
+    }
+    else snapshotsEl.innerHTML = "<button type=\"button\" disabled>Past reads are unavailable</button>";
   }
 }
 
@@ -357,10 +666,10 @@ async function loadSnapshot(id) {
     currentMarkdown = payload.report;
     currentSnapshotId = payload.id;
     currentNormalized = payload.normalized || null;
-    renderReportView(currentMarkdown, currentNormalized);
+    renderReportView(currentMarkdown, currentNormalized, payload.comparisonSnapshot || null);
     setStatus(`Loaded snapshot ${id}.`);
   } catch (error) {
-    setStatus(error.message);
+    setStatus("Couldn't load that past read.");
   }
 }
 
@@ -370,7 +679,7 @@ async function copyReport() {
     return;
   }
   await navigator.clipboard.writeText(currentMarkdown);
-  setStatus("Markdown copied.");
+  setStatus("Market read copied.");
 }
 
 runButton.addEventListener("click", runWorkflow);
@@ -384,8 +693,8 @@ snapshotsEl.addEventListener("click", (event) => {
 fetch("/api/health")
   .then((response) => response.json())
   .then((health) => {
-    if (!health.hasOpenRouterKey) {
-      setStatus("OPENROUTER_API_KEY is missing. Add it to .env, then restart the server.");
+    if (!health.hasNvidiaKey) {
+      setStatus("AI commentary is offline. A data-based read is still available.");
     }
   })
   .catch(() => {

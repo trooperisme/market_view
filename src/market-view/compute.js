@@ -1,4 +1,10 @@
 import { numericValue } from "./format.js";
+import { computeHyperdashSignal } from "../../public/cohort-signal.js";
+
+export { computeHyperdashSignal };
+
+export const HYPERDASH_SIGNIFICANT_NET_SHARE_PCT = 25;
+export const HYPERDASH_EXTREME_NET_SHARE_PCT = 40;
 
 export function sentimentForExposure(longPct, shortPct) {
   if (longPct >= 60) return "BULLISH ↑";
@@ -41,6 +47,33 @@ export function cohortValueInMillions(value) {
   return parsed;
 }
 
+export function computeHyperdashCohorts(cohorts) {
+  return cohorts.map((cohort) => {
+    const valuesAvailable = Boolean(cohort.long && cohort.short)
+      && !/unavailable/i.test(`${cohort.long} ${cohort.short}`);
+    const long = cohortValueInMillions(cohort.long);
+    const short = cohortValueInMillions(cohort.short);
+    const total = long + short;
+    const net = long - short;
+    const netSharePct = valuesAvailable && total ? (Math.abs(net) / total) * 100 : 0;
+    const direction = !valuesAvailable ? "unknown" : net > 0 ? "long" : net < 0 ? "short" : "balanced";
+    const isSignificant = valuesAvailable && total > 0 && netSharePct >= HYPERDASH_SIGNIFICANT_NET_SHARE_PCT;
+    const isExtreme = valuesAvailable && total > 0 && netSharePct >= HYPERDASH_EXTREME_NET_SHARE_PCT;
+
+    return {
+      ...cohort,
+      values_available: valuesAvailable,
+      long_millions: Number(long.toFixed(2)),
+      short_millions: Number(short.toFixed(2)),
+      net_millions: Number(net.toFixed(2)),
+      net_share_pct: Number(netSharePct.toFixed(1)),
+      direction,
+      is_significant: isSignificant,
+      is_extreme: isExtreme,
+    };
+  });
+}
+
 export function computeHyperdashComparison(cohorts) {
   const profitable = cohorts.slice(0, 3);
   const unprofitable = cohorts.slice(3, 6);
@@ -65,5 +98,12 @@ export function computeHyperdashComparison(cohorts) {
 
 export function buildComputedInput(input) {
   const traders = (input.traders || []).map(computeTrader);
-  return { ...input, traders, hyperdash_comparison: computeHyperdashComparison(input.hyperdash_cohorts || []) };
+  const hyperdashCohorts = computeHyperdashCohorts(input.hyperdash_cohorts || []);
+  return {
+    ...input,
+    traders,
+    hyperdash_cohorts: hyperdashCohorts,
+    hyperdash_comparison: computeHyperdashComparison(hyperdashCohorts),
+    hyperdash_signal: computeHyperdashSignal(hyperdashCohorts),
+  };
 }

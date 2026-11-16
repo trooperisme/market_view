@@ -1,12 +1,7 @@
-import { join } from "node:path";
-import { generateMarketViewReport } from "../../src/market-view/workflow.js";
 import { requireApiAuth } from "../../lib/auth.js";
 import { DEFAULT_MODEL } from "../../src/config.js";
 import { readVercelJsonBody } from "../../src/http.js";
-
-function timestamp() {
-  return new Date().toISOString().replace(/[:.]/g, "-");
-}
+import { runMarketViewJob } from "../../src/market-view/server-run.js";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -18,25 +13,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY is missing in Vercel environment variables.");
-    }
-
     const body = await readVercelJsonBody(req);
-    const outputDir = join("/tmp", "market-view", `web-${timestamp()}`);
-    const result = await generateMarketViewReport({
-      live: true,
+    const result = await runMarketViewJob({
       model: body.model || DEFAULT_MODEL,
-      outputDir,
-      coinsenseImage: true,
-      embedImages: true,
+      includeOpenOrders: true,
+      sourceConcurrency: 2,
+      scrapeMaxAttempts: 3,
+      llmTimeoutMs: 30000,
+      llmBackupTimeoutMs: 30000,
     });
-
     return res.status(200).json({
       model: result.model,
       snapshotId: result.snapshotId,
+      serverSnapshotId: result.serverSnapshotId,
+      localRunSnapshotId: result.localRunSnapshotId,
       report: result.report,
       normalized: result.normalized,
+      summaryFallback: result.summaryFallback,
+      comparisonSnapshot: result.comparisonSnapshot,
+      snapshotPersistence: result.snapshotPersistence,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

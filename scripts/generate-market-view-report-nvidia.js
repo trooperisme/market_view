@@ -14,12 +14,13 @@ Usage:
   npm run market-view:llm-test
   npm run market-view:llm-test -- --live
   npm run market-view:llm-test -- --input fixtures/market-view/mock-input.json
-  npm run market-view:llm-test -- --model nvidia/nemotron-3-ultra-550b-a55b:free
+  npm run market-view:llm-test -- --model z-ai/glm-5.3-flash
 
 Environment:
   FIRECRAWL_API_KEY is required for live collection unless the local Firecrawl CLI is authenticated.
-  OPENROUTER_API_KEY must be set.
-  OPENROUTER_MODEL is optional. Default: ${DEFAULT_MODEL}
+  NVIDIA_API_KEY must be set.
+  NVIDIA_MODEL is optional. Default: ${DEFAULT_MODEL}
+  NVIDIA_BACKUP_MODELS is a comma-separated list of free NVIDIA API Catalog chat models.
 `.trim();
 }
 
@@ -28,7 +29,6 @@ function parseArgs(argv) {
     input: DEFAULT_INPUT,
     model: DEFAULT_MODEL,
     outputDir: null,
-    coinsenseImage: true,
     live: false,
   };
 
@@ -38,7 +38,6 @@ function parseArgs(argv) {
     else if (arg === "--input") args.input = argv[++i];
     else if (arg === "--model") args.model = argv[++i];
     else if (arg === "--output-dir") args.outputDir = argv[++i];
-    else if (arg === "--no-coinsense-image") args.coinsenseImage = false;
     else if (arg === "--live") args.live = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -57,7 +56,6 @@ async function main() {
     inputPath: args.input,
     model: args.model,
     outputDir: args.outputDir,
-    coinsenseImage: args.coinsenseImage,
     live: args.live,
   });
   console.log(result.report);

@@ -42,6 +42,18 @@ export function isAuthorizedHeader(header) {
   );
 }
 
+export function isAuthorizedSecret(value, expected) {
+  const supplied = String(value || "");
+  const configured = String(expected || "");
+  return Boolean(configured) && safeEqual(supplied, configured);
+}
+
+export function isAuthorizedCronRequest(req) {
+  const header = String(req?.headers?.authorization || "");
+  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+  return isAuthorizedSecret(token, process.env.CRON_SECRET);
+}
+
 export function requireApiAuth(req, res) {
   if (!isAuthConfigured()) {
     res.status(503).json({ error: "Market View auth is not configured." });

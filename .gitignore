@@ -8,5 +8,6 @@
 .vercel/
 node_modules/
 runs/
+supabase/.temp/
 *.tar.gz
 *.tmp

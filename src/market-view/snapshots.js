@@ -51,6 +51,21 @@ export async function readSnapshot(id, { runsDir = RUNS_DIR } = {}) {
   return { id, report, analysis, normalized };
 }
 
+export async function readSnapshotWithComparison(id, { runsDir = RUNS_DIR } = {}) {
+  const snapshot = await readSnapshot(id, { runsDir });
+  const snapshots = await listSnapshots({ runsDir });
+  const current = snapshots.find((candidate) => candidate.id === id);
+  const currentTime = new Date(current?.createdAt || 0).getTime();
+  if (!Number.isFinite(currentTime) || currentTime <= 0) return snapshot;
+
+  for (const candidate of snapshots) {
+    if (new Date(candidate.createdAt).getTime() >= currentTime) continue;
+    const previous = await readSnapshot(candidate.id, { runsDir });
+    if (previous.normalized) return { ...snapshot, comparisonSnapshot: previous };
+  }
+  return snapshot;
+}
+
 export async function serveSnapshotAsset(res, { id, file, runsDir = RUNS_DIR }) {
   if (!/^[A-Za-z0-9_.-]+$/.test(id) || !/^[A-Za-z0-9_.-]+$/.test(file)) {
     throw new Error("Invalid snapshot asset path.");

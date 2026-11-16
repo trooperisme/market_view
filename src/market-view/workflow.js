@@ -1,10 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { DEFAULT_INPUT, DEFAULT_MODEL, marketViewRunDir } from "../config.js";
-import { captureCoinsenseImage, captureHyperdashTrendImages } from "./assets.js";
 import { buildComputedInput } from "./compute.js";
 import { collectMarketViewInput } from "./collectors.js";
-import { callOpenRouter, fallbackAnalysis } from "./llm.js";
+import { callNvidia, fallbackAnalysis } from "./llm.js";
 import { renderReport } from "./report.js";
 
 export async function generateMarketViewReport({
@@ -13,48 +12,42 @@ export async function generateMarketViewReport({
   live = false,
   model = DEFAULT_MODEL,
   outputDir = null,
-  coinsenseImage = true,
-  embedImages = false,
+  includeOpenOrders = true,
+  sourceConcurrency = 5,
+  scrapeMaxAttempts = 4,
+  llmTimeoutMs,
+  llmBackupTimeoutMs,
 } = {}) {
   const resolvedOutputDir = resolve(outputDir || marketViewRunDir());
   await mkdir(resolvedOutputDir, { recursive: true });
   const rawInput = inputData || (live
-    ? await collectMarketViewInput({ outputDir: resolvedOutputDir })
+    ? await collectMarketViewInput({
+      outputDir: resolvedOutputDir,
+      includeOpenOrders,
+      sourceConcurrency,
+      scrapeMaxAttempts,
+    })
     : JSON.parse(await readFile(resolve(inputPath), "utf8")));
   const input = buildComputedInput(rawInput);
-  if (coinsenseImage) {
-    input.coinsense.chart_image = await captureCoinsenseImage(resolvedOutputDir, {
-      embedImage: embedImages,
-      screenshotUrl: input.coinsense_screenshot_url,
-    });
-  }
-  const hyperdashTrendMap = await captureHyperdashTrendImages(
-    resolvedOutputDir,
-    input.hyperdash_screenshot_url,
-    { embedImages },
-  );
-  input.hyperdash_cohorts = (input.hyperdash_cohorts || []).map((cohort) => ({
-    ...cohort,
-    trend_image: hyperdashTrendMap.has(cohort.slug)
-      ? { path: hyperdashTrendMap.get(cohort.slug), source: "Hyperdash screenshot crop" }
-      : null,
-  }));
   await writeFile(join(resolvedOutputDir, "normalized-input.json"), JSON.stringify(input, null, 2));
 
   let result;
+  let summaryFallback = false;
   try {
-    result = await callOpenRouter({ model, input });
-    await writeFile(join(resolvedOutputDir, "openrouter-response.json"), JSON.stringify(result.raw, null, 2));
+    result = await callNvidia({ model, input, timeoutMs: llmTimeoutMs, backupTimeoutMs: llmBackupTimeoutMs });
+    model = result.model;
+    await writeFile(join(resolvedOutputDir, "nvidia-response.json"), JSON.stringify(result.raw, null, 2));
   } catch (error) {
+    summaryFallback = true;
     result = {
       raw: { fallback: true, error: error.message },
       parsed: fallbackAnalysis(input, error.message),
     };
-    await writeFile(join(resolvedOutputDir, "openrouter-error.txt"), error.message);
+    await writeFile(join(resolvedOutputDir, "nvidia-error.txt"), error.message);
   }
   await writeFile(join(resolvedOutputDir, "analysis.json"), JSON.stringify(result.parsed, null, 2));
 
-  const report = renderReport(input, result.parsed, model);
+  const report = renderReport(input, result.parsed);
   await writeFile(join(resolvedOutputDir, "report.md"), report);
   return {
     model,
@@ -63,5 +56,6 @@ export async function generateMarketViewReport({
     report,
     normalized: input,
     analysis: result.parsed,
+    summaryFallback,
   };
 }
