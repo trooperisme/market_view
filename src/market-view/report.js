@@ -117,6 +117,31 @@ export function renderPairPositionTable(trader) {
   ].join("\n");
 }
 
+function renderPearVaultPairTable(trader) {
+  const groups = new Map();
+  for (const leg of trader.pair_positions || []) {
+    if (leg.status !== "open") continue;
+    const key = leg.position_group_id || leg.position_group;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(leg);
+  }
+  const rows = [...groups.values()].map((legs) => {
+    const label = (side) => {
+      const selected = legs.filter((leg) => leg.side === side);
+      if (selected.length === 1) return selected[0].ticker;
+      return selected.length ? `${selected[0].ticker} +${selected.length - 1}` : "—";
+    };
+    const gross = legs.reduce((sum, leg) => sum + (Number(leg.displayed_size_usd) || 0), 0);
+    return { long: label("long"), short: label("short"), gross };
+  }).sort((a, b) => b.gross - a.gross);
+  if (!rows.length) return "";
+  return [
+    "| Long | Short | Gross notional |",
+    "|---|---|---:|",
+    ...rows.map((row) => `| ${row.long} | ${row.short} | ${money(row.gross)} |`),
+  ].join("\n");
+}
+
 function renderPairReads(trader) {
   const groups = new Map();
   for (const leg of trader.pair_positions || []) {
@@ -211,6 +236,16 @@ function visibleAccountStats(value) {
 }
 
 function traderPositionMix(trader) {
+  const allocation = trader.vault_allocation;
+  if (allocation && Number.isFinite(Number(allocation.long_usd)) && Number.isFinite(Number(allocation.short_usd))) {
+    const longExposure = Number(allocation.long_usd);
+    const shortExposure = Number(allocation.short_usd);
+    const total = longExposure + shortExposure;
+    const longPct = total ? longExposure / total * 100 : 0;
+    const shortPct = total ? shortExposure / total * 100 : 0;
+    const longBlocks = total ? Math.round(longPct / 5) : 0;
+    return { total, longPct, shortPct, visualBar: `${"🟩".repeat(longBlocks)}${"🟥".repeat(20 - longBlocks)}` };
+  }
   const positions = trader.positions || [];
   const longExposure = Number.isFinite(Number(trader.long_exposure))
     ? Number(trader.long_exposure)
@@ -274,13 +309,14 @@ export function renderReport(input, analysis) {
     lines.push("");
 
     if (trader.pair_positions?.length || trader.pair_positions_status) {
-      lines.push("Pair positions");
+      const isPearVault = trader.name === "moritzpike vault";
+      lines.push(isPearVault ? "Open positions" : "Pair positions");
       lines.push("");
-      if (trader.pair_positions?.length) {
+      if (trader.pair_positions?.length && !isPearVault) {
         lines.push(renderPairReads(trader));
         lines.push("");
       }
-      const pairTable = renderPairPositionTable(trader);
+      const pairTable = isPearVault ? renderPearVaultPairTable(trader) : renderPairPositionTable(trader);
       if (pairTable) lines.push(pairTable);
       else lines.push(trader.pair_positions_status === "unavailable"
         ? "Pair positions could not be confirmed."

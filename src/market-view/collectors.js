@@ -373,7 +373,7 @@ export async function collectMarketViewInput({
       try {
         return { ...(await collectPearVault(sourceUrls.pearMoritzpikeVault, { outputDir: cacheDir })), status: "available", source_name: "pear-moritzpike-vault" };
       } catch (error) {
-        return { pairPositions: [], positionCount: 0, status: "unavailable", source_name: "pear-moritzpike-vault", error: error.message };
+        return { pairPositions: [], allocation: null, positionCount: 0, status: "unavailable", source_name: "pear-moritzpike-vault", error: error.message };
       }
     },
   ], sourceConcurrency);
@@ -546,6 +546,7 @@ export async function collectMarketViewInput({
         status: moritzpikeVault.status === "available" ? undefined : "positions_unavailable",
         positions: [],
         pair_positions: moritzpikeVault.pairPositions,
+        vault_allocation: moritzpikeVault.allocation,
         pair_positions_status: moritzpikeVault.status === "available"
           ? moritzpikeVault.pairPositions.length ? "available" : "empty"
           : "unavailable",

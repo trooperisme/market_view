@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { HYPERLIQUID_INFO_URL } from "../config.js";
 import { categoryFor } from "./parsers.js";
 
 const PEAR_GATEWAY = "https://pro-gateway.pearprotocol.io";
@@ -74,8 +75,31 @@ export function parsePearVaultPositions(payload, instruments, prices) {
   });
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+export function parsePearVaultAllocation(state) {
+  if (!Array.isArray(state?.assetPositions)) throw new Error("Pear vault agent state has no asset positions");
+  let longUsd = 0;
+  let shortUsd = 0;
+  for (const item of state.assetPositions) {
+    const position = item.position;
+    const size = numberOrNull(position?.szi);
+    const value = numberOrNull(position?.positionValue);
+    if (size === null || value === null) throw new Error("Pear vault agent position has incomplete allocation data");
+    if (size > 0) longUsd += Math.abs(value);
+    if (size < 0) shortUsd += Math.abs(value);
+  }
+  const totalUsd = longUsd + shortUsd;
+  return {
+    long_usd: longUsd,
+    short_usd: shortUsd,
+    total_usd: totalUsd,
+    long_pct: totalUsd ? longUsd / totalUsd * 100 : 0,
+    short_pct: totalUsd ? shortUsd / totalUsd * 100 : 0,
+    source: "Hyperliquid vault agent clearinghouse state",
+  };
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
   if (!response.ok) throw new Error(`Pear vault request failed: ${response.status} ${url}`);
   return response.json();
 }
@@ -101,16 +125,30 @@ export async function collectPearVault(url, { outputDir } = {}) {
     seenCursors.add(cursor);
     if (page === 19) throw new Error("Pear vault positions exceeded 20 pages");
   }
-  const [instruments, prices] = await Promise.all([
+  const [instruments, prices, metadata] = await Promise.all([
     fetchJson(`${PEAR_GATEWAY}/instruments?connector=hyperliquid`),
     fetchJson(`${PEAR_GATEWAY}/prices?connector=hyperliquid`),
+    fetchJson(`${PEAR_GATEWAY}/vaults/${address}`),
   ]);
+  const vault = metadata?.vault;
+  const agentAddress = String(vault?.agentAddress || "");
+  if (String(vault?.vaultAddress || "").toLowerCase() !== address || !/^0x[a-fA-F0-9]{40}$/.test(agentAddress)) {
+    throw new Error("Pear vault metadata has no matching vault agent address");
+  }
+  const agentState = await fetchJson(HYPERLIQUID_INFO_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "clearinghouseState", user: agentAddress }),
+  });
+  const allocation = parsePearVaultAllocation(agentState);
   const pairPositions = parsePearVaultPositions({ positions }, instruments, prices);
   if (outputDir) {
     await mkdir(outputDir, { recursive: true });
     await writeFile(join(outputDir, "pear-moritzpike-vault.json"), JSON.stringify({
       fetched_at: new Date().toISOString(),
       vault_address: address,
+      agent_address: agentAddress,
+      vault_allocation: allocation,
       positions,
       instruments: instruments.instruments.filter((instrument) =>
         positions.some((position) => position.legs?.some((leg) => String(leg.asset) === String(instrument.id)))),
@@ -118,5 +156,5 @@ export async function collectPearVault(url, { outputDir } = {}) {
         .map((leg) => [String(leg.asset), prices.mark[String(leg.asset)] ?? null])),
     }, null, 2));
   }
-  return { pairPositions, positionCount: positions.filter((position) => position.status === "OPEN").length };
+  return { pairPositions, allocation, positionCount: positions.filter((position) => position.status === "OPEN").length };
 }
