@@ -7,6 +7,7 @@ import {
   sortTableRowsByPositionValue,
 } from "./position-tools.js";
 import { ensureHyperdashDirectionalRead } from "./cohort-render.js";
+import { renderPearVaultPositions } from "./pear-vault-view.js";
 
 const runButton = document.querySelector("#run");
 const copyButton = document.querySelector("#copy");
@@ -211,6 +212,7 @@ function renderReportView(markdown, normalized, comparisonSnapshot = null) {
   renderTraderPositionMixes(normalized);
   enhanceOpenOrderTables();
   enhanceTraderPositionTables(normalized, comparisonSnapshot?.normalized || null);
+  renderPearVaultPositions(normalized, comparisonSnapshot?.normalized || null, reportEl);
 }
 
 function highlightImportantHyperdashCohorts(normalized) {
@@ -304,6 +306,13 @@ function collapsePositionDetails() {
 }
 
 function traderPositionMix(trader) {
+  const allocation = trader?.vault_allocation;
+  if (allocation && Number.isFinite(Number(allocation.long_usd)) && Number.isFinite(Number(allocation.short_usd))) {
+    const long = Number(allocation.long_usd);
+    const short = Number(allocation.short_usd);
+    const total = long + short;
+    return total ? { longPct: long / total * 100, shortPct: short / total * 100 } : null;
+  }
   const positions = trader?.positions || [];
   const longExposure = Number.isFinite(Number(trader?.long_exposure))
     ? Number(trader.long_exposure)
